@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== USUARIOS Y ROLES ====================
+
+model Usuario {
+  id               Int       @id @default(autoincrement())
+  nombre           String
+  apellido         String
+  correo           String    @unique
+  fecha_nacimiento DateTime
+  contrasena       String
+  fecha_registro   DateTime  @default(now())
+  estado           String    @default("activo")
+
+  telefono              String?
+  foto_perfil           String?
+  verificado_email      Boolean   @default(false)
+  email_token           String?
+  email_token_expira    DateTime?
+  ultimo_acceso         DateTime?
+  preferencias_email    Json?
+
+  propietario      Propietario?
+  inquilino        Inquilino?
+  administrador    Administrador?
+
+  notificaciones   Notificacion[]
+  reportes         Reporte[]      @relation("UsuarioReporta")
+  evaluaciones     Evaluacion[]   @relation("UsuarioEvaluador")
+  documentos       Documento[]
+  resenas_escritas Resena[]
+}
+
+model Propietario {
+  usuario_id          Int        @id
+  estado_verificacion String     @default("pendiente")
+
+  usuario             Usuario    @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  inmuebles           Inmueble[]
+}
+
+model Inquilino {
+  usuario_id          Int              @id
+  estado_verificacion String           @default("pendiente")
+
+  usuario             Usuario          @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  solicitudes         SolicitudRenta[]
+}
+
+model Administrador {
+  usuario_id     Int            @id
+  nivel_acceso   String
+
+  usuario        Usuario        @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  verificaciones Verificacion[]
+  moderaciones   Moderacion[]
+}
+
+// ==================== INMUEBLES Y PUBLICACIONES ====================
+
+model Inmueble {
+  id                  Int                      @id @default(autoincrement())
+  propietario_id      Int
+  tipo_inmueble       String
+  direccion           String
+  numero_habitaciones Int
+  numero_banos        Int
+  metros_cuadrados    Float
+
+  estado_inventario      String   @default("disponible")
+  documento_verificado   Boolean  @default(false)
+  latitud                Float?
+  longitud               Float?
+  piso                   Int?     @default(1)
+  mantenimiento_incluido Boolean  @default(true)
+  servicios_incluidos    String?
+  plazo_minimo_meses     Int      @default(12)
+
+  propietario         Propietario              @relation(fields: [propietario_id], references: [usuario_id])
+  caracteristicas     InmuebleCaracteristica[]
+  documentos          Documento[]
+  publicaciones       Publicacion[]
+}
+
+model Caracteristica {
+  id        Int                      @id @default(autoincrement())
+  nombre    String
+  inmuebles InmuebleCaracteristica[]
+}
+
+model InmuebleCaracteristica {
+  inmueble_id       Int
+  caracteristica_id Int
+
+  inmueble          Inmueble       @relation(fields: [inmueble_id], references: [id], onDelete: Cascade)
+  caracteristica    Caracteristica @relation(fields: [caracteristica_id], references: [id], onDelete: Cascade)
+
+  @@id([inmueble_id, caracteristica_id])
+}
+
+model Publicacion {
+  id                 Int              @id @default(autoincrement())
+  inmueble_id        Int
+  precio_renta       Float
+  deposito           Float
+  descripcion        String
+  reglas             String?
+  estado             String           @default("activa")
+  fecha_publicacion  DateTime         @default(now())
+  fecha_finalizacion DateTime?
+
+  calificacion_promedio Float @default(0)
+  total_resenas         Int   @default(0)
+
+  inmueble           Inmueble         @relation(fields: [inmueble_id], references: [id], onDelete: Cascade)
+  fotos              Foto[]
+  solicitudes        SolicitudRenta[]
+  reportes           Reporte[]
+  resenas            Resena[]
+}
+
+model Foto {
+  id             Int         @id @default(autoincrement())
+  publicacion_id Int
+  ruta_archivo   String
+  orden          Int         @default(1)
+
+  publicacion    Publicacion @relation(fields: [publicacion_id], references: [id], onDelete: Cascade)
+}
+
+model Resena {
+  id             Int      @id @default(autoincrement())
+  publicacion_id Int
+  usuario_id     Int
+  calificacion   Int
+  comentario     String
+  fecha          DateTime @default(now())
+  duracion_meses Int?
+
+  publicacion    Publicacion @relation(fields: [publicacion_id], references: [id], onDelete: Cascade)
+  usuario        Usuario     @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+}
+
+// ==================== DOCUMENTOS Y VERIFICACIÓN ====================
+
+model Documento {
+  id             Int            @id @default(autoincrement())
+  usuario_id     Int?
+  inmueble_id    Int?
+  tipo_documento String
+  ruta_archivo   String
+  fecha_carga    DateTime       @default(now())
+  estado         String         @default("pendiente")
+
+  verificado_por_admin Boolean   @default(false)
+  motivo_rechazo       String?
+  revisado_por         Int?
+  fecha_revision       DateTime?
+
+  usuario        Usuario?       @relation(fields: [usuario_id], references: [id])
+  inmueble       Inmueble?      @relation(fields: [inmueble_id], references: [id])
+  verificaciones Verificacion[]
+}
+
+model Verificacion {
+  id               Int           @id @default(autoincrement())
+  documento_id     Int
+  administrador_id Int
+  estado           String
+  fecha_revision   DateTime      @default(now())
+  observaciones    String?
+
+  documento        Documento     @relation(fields: [documento_id], references: [id])
+  administrador    Administrador @relation(fields: [administrador_id], references: [usuario_id])
+}
+
+// ==================== RENTAS Y VISITAS ====================
+
+model SolicitudRenta {
+  id              Int               @id @default(autoincrement())
+  inquilino_id    Int
+  publicacion_id  Int
+  fecha_solicitud DateTime          @default(now())
+  estado          String            @default("pendiente")
+  mensaje         String?
+
+  inquilino       Inquilino         @relation(fields: [inquilino_id], references: [usuario_id])
+  publicacion     Publicacion       @relation(fields: [publicacion_id], references: [id])
+  visitas         Visita[]
+  experiencia     ExperienciaRenta?
+}
+
+model Visita {
+  id           Int            @id @default(autoincrement())
+  solicitud_id Int
+  fecha_hora   DateTime
+  tipo         String
+  modalidad    String         @default("presencial")
+  estado       String         @default("agendada")
+
+  notas        String?
+
+  solicitud    SolicitudRenta @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+}
+
+model ExperienciaRenta {
+  id           Int            @id @default(autoincrement())
+  solicitud_id Int            @unique
+  fecha_inicio DateTime
+  fecha_fin    DateTime?
+  estado       String         @default("activa")
+
+  solicitud    SolicitudRenta @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+  evaluaciones Evaluacion[]
+}
+
+model Evaluacion {
+  id                   Int              @id @default(autoincrement())
+  experiencia_renta_id Int
+  usuario_evaluador_id Int
+  tipo_evaluacion      String
+  calificacion         Int
+  comentario           String?
+  fecha_evaluacion     DateTime         @default(now())
+
+  experiencia          ExperienciaRenta @relation(fields: [experiencia_renta_id], references: [id], onDelete: Cascade)
+  usuario_evaluador    Usuario          @relation("UsuarioEvaluador", fields: [usuario_evaluador_id], references: [id])
+}
+
+// ==================== NOTIFICACIONES, REPORTES Y MODERACIÓN ====================
+
+model Notificacion {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int
+  tipo           String
+  mensaje        String
+  fecha_creacion DateTime  @default(now())
+  fecha_envio    DateTime?
+  estado         String    @default("no_leida")
+
+  enviada_email  Boolean   @default(false)
+
+  usuario        Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+}
+
+model Reporte {
+  id             Int         @id @default(autoincrement())
+  usuario_id     Int
+  publicacion_id Int
+  motivo         String
+  descripcion    String?
+  fecha_reporte  DateTime    @default(now())
+  estado         String      @default("pendiente")
+
+  usuario        Usuario     @relation("UsuarioReporta", fields: [usuario_id], references: [id])
+  publicacion    Publicacion @relation(fields: [publicacion_id], references: [id])
+  moderaciones   Moderacion[]
+}
+
+model Moderacion {
+  id               Int           @id @default(autoincrement())
+  reporte_id       Int
+  administrador_id Int
+  accion           String
+  fecha_moderacion DateTime      @default(now())
+  observaciones    String?
+
+  reporte          Reporte       @relation(fields: [reporte_id], references: [id], onDelete: Cascade)
+  administrador    Administrador @relation(fields: [administrador_id], references: [usuario_id])
+}
