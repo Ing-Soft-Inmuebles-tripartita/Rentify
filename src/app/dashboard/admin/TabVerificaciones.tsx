@@ -1,22 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import type { Prisma } from '@prisma/client'
 import { FileText, Eye, CheckCircle2, XCircle, User, Calendar } from 'lucide-react'
 import { aprobarDocumentoAction, rechazarDocumentoAction } from '@/app/actions/admin'
 
-export type DocumentoAdmin = Prisma.DocumentoGetPayload<{
-  include: {
-    usuario: { include: { propietario: true; inquilino: true } }
-    inmueble: true
-  }
-}>
+export interface DocumentoAdmin {
+  id: number
+  tipo_documento: string
+  ruta_archivo: string
+  fecha_carga: Date
+  estado: string
+  motivo_rechazo: string | null
+  usuario: {
+    nombre: string
+    apellido: string
+    correo: string
+    propietario: { estado_verificacion: string } | null
+    inquilino: { estado_verificacion: string } | null
+  } | null
+  inmueble: {
+    tipo_inmueble: string
+    direccion: string
+  } | null
+}
 
 export default function TabVerificaciones({ documentos }: { documentos: DocumentoAdmin[] }) {
   const [modalRechazar, setModalRechazar] = useState<number | null>(null)
   const [motivo, setMotivo] = useState('')
 
-  // Se conservan en la lista los documentos revisados para mantener visible su resultado.
   const pendientes = documentos.filter((d) => d.estado === 'pendiente')
 
   return (
@@ -32,7 +43,7 @@ export default function TabVerificaciones({ documentos }: { documentos: Document
 
       {documentos.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
-          No hay documentos para revisar
+          No hay documentos pendientes
         </div>
       ) : (
         <div className="space-y-3">
@@ -133,7 +144,6 @@ export default function TabVerificaciones({ documentos }: { documentos: Document
         </div>
       )}
 
-      {/* Modal de rechazar */}
       {modalRechazar && (
         <div
           className="fixed inset-0 bg-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -153,8 +163,8 @@ export default function TabVerificaciones({ documentos }: { documentos: Document
               Indica el motivo del rechazo. Se notificará al usuario para que suba uno nuevo.
             </p>
             <form
-              action={async (formData) => {
-                await rechazarDocumentoAction(formData)
+              action={(formData) => {
+                rechazarDocumentoAction(formData)
                 setModalRechazar(null)
                 setMotivo('')
               }}

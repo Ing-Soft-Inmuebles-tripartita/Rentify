@@ -18,7 +18,6 @@ interface Props {
 type Tab = 'moderacion' | 'verificaciones' | 'reportes'
 
 export default function AdminTabs({ publicaciones, documentos, reportes }: Props) {
-  // La pestaña activa es estado de interfaz; los datos se cargan en el servidor.
   const [tab, setTab] = useState<Tab>('moderacion')
 
   return (

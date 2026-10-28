@@ -1,49 +1,53 @@
 'use client'
 
 import { useState } from 'react'
-import type { Prisma } from '@prisma/client'
 import { Eye, Ban, CheckCircle2, XCircle, MapPin, User, Calendar } from 'lucide-react'
-import {
-  eliminarPublicacionAction,
-  reactivarPublicacionAction,
-  suspenderPublicacionAction,
-} from '@/app/actions/admin'
+import { suspenderPublicacionAction, reactivarPublicacionAction, eliminarPublicacionAction } from '@/app/actions/admin'
 
-export type PublicacionAdmin = Prisma.PublicacionGetPayload<{
-  include: {
-    inmueble: { include: { propietario: { include: { usuario: true } } } }
-    fotos: true
-    _count: { select: { reportes: true } }
+export interface PublicacionAdmin {
+  id: number
+  precio_renta: number
+  descripcion: string
+  estado: string
+  fecha_publicacion: Date
+  motivo_suspension: string | null
+  total_resenas: number
+  inmueble: {
+    tipo_inmueble: string
+    direccion: string
+    propietario: {
+      usuario: {
+        nombre: string
+        apellido: string
+        correo: string
+      }
+    }
   }
-}>
-
-type FiltroPublicaciones = 'todas' | 'activa' | 'suspendida' | 'eliminada'
-
-const FILTROS: { value: FiltroPublicaciones; label: string }[] = [
-  { value: 'todas', label: 'Todas' },
-  { value: 'activa', label: 'Activas' },
-  { value: 'suspendida', label: 'Suspendidas' },
-  { value: 'eliminada', label: 'Eliminadas' },
-]
+  fotos: { ruta_archivo: string }[]
+  _count: { reportes: number }
+}
 
 export default function TabModeracion({ publicaciones }: { publicaciones: PublicacionAdmin[] }) {
-  const [filtro, setFiltro] = useState<FiltroPublicaciones>('todas')
+  const [filtro, setFiltro] = useState<'todas' | 'activa' | 'suspendida' | 'eliminada'>('todas')
   const [modalSuspender, setModalSuspender] = useState<number | null>(null)
   const [motivo, setMotivo] = useState('')
 
-  // El filtrado local evita consultar de nuevo la base de datos al cambiar de estado.
   const filtradas = publicaciones.filter((p) =>
     filtro === 'todas' ? true : p.estado === filtro
   )
 
   return (
     <div className="space-y-4">
-      {/* Filtros */}
       <div className="flex items-center gap-2 flex-wrap">
-        {FILTROS.map((f) => (
+        {[
+          { value: 'todas', label: 'Todas' },
+          { value: 'activa', label: 'Activas' },
+          { value: 'suspendida', label: 'Suspendidas' },
+          { value: 'eliminada', label: 'Eliminadas' },
+        ].map((f) => (
           <button
             key={f.value}
-            onClick={() => setFiltro(f.value)}
+            onClick={() => setFiltro(f.value as any)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               filtro === f.value
                 ? 'bg-primary text-white'
@@ -58,7 +62,6 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
         </span>
       </div>
 
-      {/* Lista */}
       {filtradas.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
           No hay publicaciones con este filtro
@@ -70,7 +73,6 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
               key={pub.id}
               className="border border-gray-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 hover:shadow-sm transition"
             >
-              {/* Foto */}
               <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden bg-surface-canvas flex-shrink-0">
                 {pub.fotos[0] ? (
                   <img
@@ -85,7 +87,6 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                 )}
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -133,7 +134,6 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                   </p>
                 )}
 
-                {/* Acciones */}
                 <div className="flex flex-wrap gap-2 mt-3">
                   <a
                     href={`/propiedad/${pub.id}`}
@@ -183,7 +183,6 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
         </div>
       )}
 
-      {/* Modal de suspender */}
       {modalSuspender && (
         <div
           className="fixed inset-0 bg-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -203,8 +202,8 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
               Indica el motivo de la suspensión. Se notificará al propietario.
             </p>
             <form
-              action={async (formData) => {
-                await suspenderPublicacionAction(formData)
+              action={(formData) => {
+                suspenderPublicacionAction(formData)
                 setModalSuspender(null)
                 setMotivo('')
               }}

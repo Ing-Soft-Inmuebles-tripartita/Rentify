@@ -9,11 +9,9 @@ import AdminTabs from './AdminTabs'
 async function AdminContent() {
   const usuario = await getCurrentUser()
 
-  // La autorización de la página es adicional a la que aplica cada Server Action.
   if (!usuario) redirect('/login')
   if (!usuario.administrador) redirect('/dashboard')
 
-  // Se reúnen indicadores y datos para las pestañas en paralelo.
   const [
     totalUsuarios,
     totalInmuebles,
@@ -88,7 +86,6 @@ async function AdminContent() {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-xs text-on-surface-variant uppercase tracking-wider">Usuarios</p>
@@ -110,30 +107,4 @@ async function AdminContent() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-xs text-on-surface-variant uppercase tracking-wider">Reportes</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{reportesPendientes}</p>
-          <p className="text-[11px] text-on-surface-variant mt-1">pendientes</p>
-        </div>
-      </div>
-
-      <AdminTabs
-        publicaciones={publicaciones}
-        documentos={documentos}
-        reportes={reportes}
-      />
-    </div>
-  )
-}
-
-export default function AdminPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="space-y-4">
-          <div className="h-10 bg-gray-200 rounded w-64 animate-pulse" />
-          <div className="h-32 bg-gray-200 rounded animate-pulse" />
-        </div>
-      }
-    >
-      <AdminContent />
-    </Suspense>
-  )
-}
+          <p className="text-[11px] text-on-surface-variant mt-1">pend
