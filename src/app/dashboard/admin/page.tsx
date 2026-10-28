@@ -107,4 +107,30 @@ async function AdminContent() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-xs text-on-surface-variant uppercase tracking-wider">Reportes</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{reportesPendientes}</p>
-          <p className="text-[11px] text-on-surface-variant mt-1">pend
+          <p className="text-[11px] text-on-surface-variant mt-1">pendientes</p>
+        </div>
+      </div>
+
+      <AdminTabs
+        publicaciones={publicaciones as any}
+        documentos={documentos as any}
+        reportes={reportes as any}
+      />
+    </div>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-200 rounded w-64 animate-pulse" />
+          <div className="h-32 bg-gray-200 rounded animate-pulse" />
+        </div>
+      }
+    >
+      <AdminContent />
+    </Suspense>
+  )
+}
