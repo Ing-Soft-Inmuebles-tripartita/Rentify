@@ -24,6 +24,7 @@ export default function MapaPropiedad({ latitud, longitud, direccion, tipoInmueb
   const [montado, setMontado] = useState(false)
 
   useEffect(() => {
+    // Leaflet necesita el DOM del navegador, por eso el mapa se monta después de hidratar.
     setMontado(true)
   }, [])
 

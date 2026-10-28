@@ -9,6 +9,7 @@ async function DashboardContent() {
   const usuario = await getCurrentUser()
   if (!usuario) return null
 
+  // Cada bloque de datos se consulta solo para el perfil que puede mostrarlo en el panel.
   const misSolicitudes = usuario.inquilino
     ? await prisma.solicitudRenta.findMany({
         where: { inquilino_id: usuario.inquilino.usuario_id },

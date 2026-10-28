@@ -88,6 +88,7 @@ export default async function PropiedadDetalle({ params }: Props) {
 
   const imagenes = publicacion.fotos.map((f) => f.ruta_archivo)
   const imagenPrincipal = imagenes[0] || 'https://via.placeholder.com/800x500'
+  // La galería usa siempre cuatro espacios secundarios; si faltan fotos, repite la portada.
   const imagenesSecundarias = imagenes.slice(1, 5)
   while (imagenesSecundarias.length < 4) {
     imagenesSecundarias.push(imagenPrincipal)

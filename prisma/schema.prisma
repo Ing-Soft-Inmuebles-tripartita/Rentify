@@ -10,6 +10,7 @@ datasource db {
 
 // ==================== USUARIOS Y ROLES ====================
 
+// Usuario concentra la identidad; los perfiles opcionales modelan los roles que puede acumular.
 model Usuario {
   id               Int       @id @default(autoincrement())
   nombre           String
@@ -66,6 +67,7 @@ model Administrador {
 
 // ==================== INMUEBLES Y PUBLICACIONES ====================
 
+// Inmueble guarda las características físicas; Publicacion contiene precio y estado de oferta.
 model Inmueble {
   id                  Int                      @id @default(autoincrement())
   propietario_id      Int

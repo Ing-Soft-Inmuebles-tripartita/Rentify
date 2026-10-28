@@ -4,6 +4,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+// Reutiliza el cliente durante las recargas en desarrollo para no agotar conexiones.
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({

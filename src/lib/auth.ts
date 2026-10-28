@@ -12,6 +12,7 @@ export interface SessionPayload {
 }
 
 export async function createSession(payload: SessionPayload) {
+  // La cookie solo se envía por HTTP y queda limitada a siete días; secure se activa en producción.
   const token = await new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -44,6 +45,7 @@ export async function getCurrentUser() {
   const session = await getSession()
   if (!session) return null
 
+  // Se consulta el usuario actual para que el resto de la aplicación use sus roles y datos vigentes.
   const usuario = await prisma.usuario.findUnique({
     where: { id: session.usuarioId },
     include: {

@@ -6,6 +6,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Iniciando seed...')
 
+  // Este seed borra y reconstruye los datos de la aplicación; úsalo solo en bases de desarrollo o prueba.
   await prisma.resena.deleteMany()
   await prisma.evaluacion.deleteMany()
   await prisma.experienciaRenta.deleteMany()

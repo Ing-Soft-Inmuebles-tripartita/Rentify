@@ -10,6 +10,7 @@ interface Props {
 }
 
 async function getPropiedades(ubicacion?: string, precio?: string) {
+  // Los filtros vienen de la URL para que la búsqueda se pueda compartir o recargar.
   const where: any = {
     estado: 'activa',
   }

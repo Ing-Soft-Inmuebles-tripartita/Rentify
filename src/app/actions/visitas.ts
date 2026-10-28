@@ -37,7 +37,7 @@ export async function agendarVisitaAction(
     return { error: 'Selecciona una fecha y una hora' }
   }
 
-  // Construir el DateTime completo
+  // Se combinan los campos separados del formulario antes de validar fecha y hora en el servidor.
   const fechaHora = new Date(`${fecha}T${hora}:00`)
 
   if (isNaN(fechaHora.getTime())) {
@@ -82,7 +82,7 @@ export async function agendarVisitaAction(
       inquilinoId = nuevoInquilino.usuario_id
     }
 
-    // 2. Buscar si ya existe una solicitud activa para esta publicación
+    // La visita siempre queda vinculada a una solicitud; se reutiliza una activa si ya existe.
     let solicitud = await prisma.solicitudRenta.findFirst({
       where: {
         inquilino_id: inquilinoId,

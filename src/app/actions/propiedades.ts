@@ -67,6 +67,7 @@ export async function publicarPropiedadAction(
       propietarioId = nuevoPropietario.usuario_id
     }
 
+    // El inmueble, sus amenidades, la publicación y las fotos forman una sola operación lógica.
     await prisma.$transaction(async (tx) => {
       const inmueble = await tx.inmueble.create({
         data: {
@@ -81,7 +82,7 @@ export async function publicarPropiedadAction(
         },
       })
 
-      // Asociar características
+      // Reutilizar amenidades existentes evita duplicados en el catálogo compartido.
       for (const nombre of caracteristicasNombres) {
         let caracteristica = await tx.caracteristica.findFirst({
           where: { nombre },

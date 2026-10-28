@@ -131,6 +131,7 @@ export async function solicitarRecuperacionAction(
   const usuario = await prisma.usuario.findUnique({ where: { correo } })
 
   if (!usuario) {
+    // Responder igual exista o no la cuenta evita revelar qué correos están registrados.
     return {
       success: true,
       mensaje:
@@ -198,6 +199,7 @@ export async function restablecerContrasenaAction(
   try {
     const contrasenaHash = await hashPassword(contrasena)
 
+    // Al cambiar la contraseña se invalida el enlace para impedir que se vuelva a usar.
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {

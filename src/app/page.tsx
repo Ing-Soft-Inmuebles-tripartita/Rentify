@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { MapPin, Calendar, Fingerprint, Key, Star } from 'lucide-react'
 
 async function PropiedadesDestacadas() {
+  // La página inicial muestra solo publicaciones activas y una foto de portada por inmueble.
   const publicaciones = await prisma.publicacion.findMany({
     take: 6,
     where: { estado: 'activa' },

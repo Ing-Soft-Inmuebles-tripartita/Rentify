@@ -53,6 +53,7 @@ export default function SubirDocumento() {
         throw new Error(`Error al generar URL: ${signedError.message}`)
       }
 
+      // Se guarda la referencia del archivo junto con el tipo para que el servidor la asocie al usuario.
       const formData = new FormData()
       formData.set('tipo_documento', tipoSelect.value)
       formData.set('ruta_archivo', signedData.signedUrl)

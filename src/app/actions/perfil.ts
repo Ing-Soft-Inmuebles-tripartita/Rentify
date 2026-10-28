@@ -159,6 +159,7 @@ export async function eliminarDocumentoAction(formData: FormData) {
     where: { id: documentoId },
   })
 
+  // El usuario solo puede borrar sus propios documentos mientras sigan pendientes de revisión.
   if (!documento) return
   if (documento.usuario_id !== usuario.id) return
   if (documento.estado === 'aprobado') return

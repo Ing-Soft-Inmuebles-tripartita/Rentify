@@ -44,6 +44,7 @@ export async function crearSolicitudAction(
     return { error: 'No puedes solicitar tu propia propiedad' }
   }
 
+  // Antes de crear otra solicitud, se comprueba si ya hay una pendiente o aprobada para esta publicación.
   const existente = await prisma.solicitudRenta.findFirst({
     where: {
       publicacion_id,
@@ -112,6 +113,7 @@ export async function aprobarSolicitudAction(formData: FormData) {
   })
 
   if (!solicitud) return
+  // La propiedad de la publicación, no el identificador del formulario, determina quién puede decidir.
   if (solicitud.publicacion.inmueble.propietario_id !== usuario.id) return
 
   await prisma.solicitudRenta.update({

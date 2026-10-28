@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from 'crypto'
 
 export function generarToken(): string {
+  // El token aleatorio se puede incluir en enlaces enviados al usuario.
   return randomBytes(32).toString('hex')
 }
 
@@ -14,5 +15,6 @@ export function estaExpirado(fechaExpiracion: Date | null): boolean {
 }
 
 export function hashToken(token: string): string {
+  // Permite guardar una huella del token en vez del valor original cuando se integra en un flujo.
   return createHash('sha256').update(token).digest('hex')
 }

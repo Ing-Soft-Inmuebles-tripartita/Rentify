@@ -15,6 +15,8 @@ export async function middleware(request: NextRequest) {
   let sesionValida = false
   if (token) {
     try {
+      // El middleware hace una comprobación rápida de firma; las acciones de servidor
+      // deben volver a comprobar la identidad y los permisos antes de modificar datos.
       await jwtVerify(token, secret)
       sesionValida = true
     } catch {

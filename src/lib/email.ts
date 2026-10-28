@@ -4,6 +4,7 @@ interface EmailOptions {
   html: string
 }
 
+// En desarrollo muestra los mensajes en la terminal; aquí se puede sustituir por un proveedor real.
 export async function enviarEmail({ to, subject, html }: EmailOptions): Promise<boolean> {
   const timestamp = new Date().toISOString()
 

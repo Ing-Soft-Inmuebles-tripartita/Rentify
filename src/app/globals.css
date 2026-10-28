@@ -1,6 +1,7 @@
 @import 'leaflet/dist/leaflet.css';
 @import "tailwindcss";
 
+/* Tokens globales del tema compartidos por las clases utilitarias de la interfaz. */
 @theme inline {
   --font-sans: var(--font-inter);
   --font-serif: var(--font-playfair);
