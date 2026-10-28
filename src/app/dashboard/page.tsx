@@ -93,7 +93,7 @@ async function DashboardContent() {
     const [usuarios, inmuebles, verificaciones, reportes] = await Promise.all([
       prisma.usuario.count(),
       prisma.inmueble.count(),
-      prisma.verificacion.count({ where: { estado: 'pendiente' } }),
+      prisma.documento.count({ where: { estado: 'pendiente' } }),
       prisma.reporte.count({ where: { estado: 'pendiente' } }),
     ])
     statsAdmin = { usuarios, inmuebles, verificaciones, reportes }
@@ -147,6 +147,12 @@ async function DashboardContent() {
           <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
             <ShieldCheck size={22} /> Panel de administración
           </h2>
+          <Link
+            href="/dashboard/admin"
+            className="mb-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-secondary"
+          >
+            Abrir herramientas de administración
+          </Link>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="text-xs text-on-surface-variant">Usuarios</p>

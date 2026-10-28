@@ -6,16 +6,17 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Iniciando seed...')
 
-  // Este seed borra y reconstruye los datos de la aplicación; úsalo solo en bases de desarrollo o prueba.
+  // El seed reconstruye los datos y sus relaciones; no debe ejecutarse sobre una base con información real.
+  // Se eliminan primero los registros dependientes para respetar las claves foráneas.
+  await prisma.moderacion.deleteMany()
+  await prisma.reporte.deleteMany()
+  await prisma.verificacion.deleteMany()
+  await prisma.documento.deleteMany()
   await prisma.resena.deleteMany()
   await prisma.evaluacion.deleteMany()
   await prisma.experienciaRenta.deleteMany()
   await prisma.visita.deleteMany()
   await prisma.solicitudRenta.deleteMany()
-  await prisma.moderacion.deleteMany()
-  await prisma.reporte.deleteMany()
-  await prisma.verificacion.deleteMany()
-  await prisma.documento.deleteMany()
   await prisma.foto.deleteMany()
   await prisma.publicacion.deleteMany()
   await prisma.inmuebleCaracteristica.deleteMany()
@@ -37,6 +38,8 @@ async function main() {
     evaluaciones: true,
     marketing: false,
   }
+
+  // ==================== USUARIOS ====================
 
   const propietarioUsuario = await prisma.usuario.create({
     data: {
@@ -95,7 +98,6 @@ async function main() {
     include: { inquilino: true, propietario: true },
   })
 
-  // Usuarios extra para reseñas
   const usuarioResena1 = await prisma.usuario.create({
     data: {
       nombre: 'Mariana',
@@ -120,7 +122,7 @@ async function main() {
     },
   })
 
-  await prisma.usuario.create({
+  const adminUsuario = await prisma.usuario.create({
     data: {
       nombre: 'Admin',
       apellido: 'Rentify',
@@ -143,6 +145,8 @@ async function main() {
 
   console.log('✅ Usuarios creados')
 
+  // ==================== CARACTERÍSTICAS ====================
+
   const caracteristicas = await Promise.all([
     prisma.caracteristica.create({ data: { nombre: 'Internet de Alta Velocidad' } }),
     prisma.caracteristica.create({ data: { nombre: 'Cocina Integral Equipada' } }),
@@ -160,6 +164,8 @@ async function main() {
 
   console.log('✅ Características creadas')
 
+  // ==================== INMUEBLES ====================
+
   const inmueblesData = [
     {
       propietario_id: propietarioUsuario.propietario!.usuario_id,
@@ -170,7 +176,7 @@ async function main() {
       metros_cuadrados: 82,
       precio_renta: 18500,
       deposito: 18500,
-      descripcion: 'Ubicado en el epicentro arquitectónico y cultural de la Colonia Americana, este departamento combina el carácter del concreto aparente pulido con la calidez de acabados artesanales en cantera jalisciense y madera de roble. El departamento goza de una orientación sur-poniente protegida por follaje maduro, generando un flujo de ventilación cruzada natural. Su sala principal con ventanales de piso a techo se abre directamente a una amplia terraza privada con vista despejada hacia la copa de las jacarandas. A pocos pasos caminables de cafés de especialidad, librerías independientes y restaurantes de autor.',
+      descripcion: 'Ubicado en el epicentro arquitectónico y cultural de la Colonia Americana, este departamento combina el carácter del concreto aparente pulido con la calidez de acabados artesanales en cantera jalisciense y madera de roble. El departamento goza de una orientación sur-poniente protegida por follaje maduro, generando un flujo de ventilación cruzada natural. Su sala principal con ventanales de piso a techo se abre directamente a una amplia terraza privada con vista despejada hacia la copa de las jacarandas.',
       reglas: 'No fumar en interiores. Máximo 2 mascotas medianas con depósito accesorio de $2,000 MXN. Horario de silencio a partir de las 22:00 hrs en áreas comunes.',
       imagen: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
       imagenes_extra: [
@@ -313,7 +319,6 @@ async function main() {
       },
     })
 
-    // Crear fotos
     await prisma.foto.create({
       data: {
         publicacion_id: publicacion.id,
@@ -332,7 +337,6 @@ async function main() {
       })
     }
 
-    // Crear reseñas
     for (const resena of data.resenas) {
       await prisma.resena.create({
         data: {
@@ -349,7 +353,7 @@ async function main() {
   console.log('✅ Inmuebles con fotos y reseñas creados')
 
   // Inmueble extra para Ana
-  const inmuebleAna = await prisma.inmueble.create({
+  await prisma.inmueble.create({
     data: {
       propietario_id: inquilinoUsuario.propietario!.usuario_id,
       tipo_inmueble: 'Departamento Moderno en Zapopan',
@@ -383,13 +387,14 @@ async function main() {
     },
   })
 
-  // Solicitud de prueba
+  // ==================== SOLICITUDES Y VISITAS ====================
+
   const publicacionCasa = await prisma.publicacion.findFirst({
     where: { inmueble: { tipo_inmueble: { contains: 'Chapalita' } } },
   })
 
   if (publicacionCasa && inquilinoUsuario.inquilino) {
-    await prisma.solicitudRenta.create({
+    const solicitud = await prisma.solicitudRenta.create({
       data: {
         inquilino_id: inquilinoUsuario.inquilino.usuario_id,
         publicacion_id: publicacionCasa.id,
@@ -397,14 +402,94 @@ async function main() {
         mensaje: 'Hola, me interesa mucho esta propiedad. ¿Podríamos agendar una visita?',
       },
     })
+
+    await prisma.visita.create({
+      data: {
+        solicitud_id: solicitud.id,
+        fecha_hora: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        tipo: 'visita',
+        modalidad: 'presencial',
+        estado: 'agendada',
+        notas: 'Me gustaría revisar la iluminación para home office.',
+      },
+    })
+
+    console.log('✅ Solicitud y visita de prueba creadas')
   }
+
+  // ==================== REPORTES DE PRUEBA ====================
+
+  const publicacionReportada = await prisma.publicacion.findFirst({
+    where: { inmueble: { tipo_inmueble: { contains: 'Chapalita' } } },
+  })
+
+  if (publicacionReportada && usuarioResena1) {
+    await prisma.reporte.create({
+      data: {
+        usuario_id: usuarioResena1.id,
+        publicacion_id: publicacionReportada.id,
+        motivo: 'Información falsa',
+        descripcion: 'Las fotos no coinciden con la propiedad real. El precio publicado es diferente al que me comentaron al llamar.',
+        estado: 'pendiente',
+      },
+    })
+    console.log('✅ Reporte de prueba creado')
+  }
+
+  // ==================== DOCUMENTOS PENDIENTES ====================
+
+  await prisma.documento.create({
+    data: {
+      usuario_id: inquilinoUsuario.id,
+      tipo_documento: 'INE',
+      ruta_archivo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400',
+      estado: 'pendiente',
+    },
+  })
+
+  await prisma.documento.create({
+    data: {
+      usuario_id: propietarioUsuario.id,
+      tipo_documento: 'Escritura',
+      ruta_archivo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400',
+      estado: 'pendiente',
+    },
+  })
+
+  console.log('✅ Documentos pendientes de verificación creados')
+
+  // ==================== NOTIFICACIONES DE PRUEBA ====================
+
+  await prisma.notificacion.create({
+    data: {
+      usuario_id: propietarioUsuario.id,
+      tipo: 'solicitud_renta',
+      mensaje: 'Ana López solicitó rentar "Departamento Familiar frente a Parque"',
+      estado: 'no_leida',
+    },
+  })
+
+  await prisma.notificacion.create({
+    data: {
+      usuario_id: propietarioUsuario.id,
+      tipo: 'visita_agendada',
+      mensaje: 'Ana López agendó una visita presencial para el Departamento Familiar',
+      estado: 'no_leida',
+    },
+  })
+
+  console.log('✅ Notificaciones de prueba creadas')
 
   console.log('')
   console.log('🎉 Seed completado exitosamente!')
   console.log('')
   console.log('📊 Resumen:')
-  console.log('   - 6 usuarios')
+  console.log('   - 6 usuarios (2 propietarios, 1 inquilino+propietario, 1 admin+propietario, 2 para reseñas)')
   console.log('   - 5 inmuebles con fotos múltiples y reseñas')
+  console.log('   - 1 solicitud + 1 visita agendada')
+  console.log('   - 1 reporte pendiente')
+  console.log('   - 2 documentos pendientes de verificación')
+  console.log('   - 2 notificaciones no leídas')
   console.log('   - 12 características')
   console.log('')
   console.log('🔑 Credenciales (contraseña: test123):')

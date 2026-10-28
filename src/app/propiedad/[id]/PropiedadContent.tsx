@@ -54,9 +54,9 @@ const ICONOS_CARACTERISTICAS: Record<string, LucideIcon> = {
 
 export default async function PropiedadDetalle({ params }: Props) {
   const { id } = await params
-  const propiedadId = parseInt(id)
+  const propiedadId = Number(id)
 
-  if (isNaN(propiedadId)) notFound()
+  if (!Number.isSafeInteger(propiedadId) || propiedadId < 1) notFound()
 
   const usuario = await getCurrentUser()
 
@@ -83,7 +83,10 @@ export default async function PropiedadDetalle({ params }: Props) {
     },
   })
 
-  if (!publicacion) notFound()
+  // Las publicaciones retiradas solo son consultables por administradores desde moderación.
+  if (!publicacion || (publicacion.estado !== 'activa' && !usuario?.administrador)) {
+    notFound()
+  }
 
   const imagenes = publicacion.fotos.map((f) => f.ruta_archivo)
   const imagenPrincipal = imagenes[0] || 'https://via.placeholder.com/800x500'

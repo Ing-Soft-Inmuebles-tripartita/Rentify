@@ -10,7 +10,7 @@ datasource db {
 
 // ==================== USUARIOS Y ROLES ====================
 
-// Usuario concentra la identidad; los perfiles opcionales modelan los roles que puede acumular.
+// Los campos de bloqueo conservan el motivo y la fecha para explicar la restricción al usuario.
 model Usuario {
   id               Int       @id @default(autoincrement())
   nombre           String
@@ -28,6 +28,10 @@ model Usuario {
   email_token_expira    DateTime?
   ultimo_acceso         DateTime?
   preferencias_email    Json?
+
+  bloqueado       Boolean   @default(false)
+  motivo_bloqueo  String?
+  fecha_bloqueo   DateTime?
 
   propietario      Propietario?
   inquilino        Inquilino?
@@ -67,7 +71,7 @@ model Administrador {
 
 // ==================== INMUEBLES Y PUBLICACIONES ====================
 
-// Inmueble guarda las características físicas; Publicacion contiene precio y estado de oferta.
+// Metadatos de suspensión registran quién moderó una publicación y por qué.
 model Inmueble {
   id                  Int                      @id @default(autoincrement())
   propietario_id      Int
@@ -121,6 +125,10 @@ model Publicacion {
 
   calificacion_promedio Float @default(0)
   total_resenas         Int   @default(0)
+
+  motivo_suspension  String?
+  suspendida_por     Int?
+  fecha_suspension   DateTime?
 
   inmueble           Inmueble         @relation(fields: [inmueble_id], references: [id], onDelete: Cascade)
   fotos              Foto[]
@@ -207,8 +215,11 @@ model Visita {
   tipo         String
   modalidad    String         @default("presencial")
   estado       String         @default("agendada")
-
   notas        String?
+
+  completada_en      DateTime?
+  cancelada_en       DateTime?
+  motivo_cancelacion String?
 
   solicitud    SolicitudRenta @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
 }

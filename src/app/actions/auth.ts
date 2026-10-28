@@ -99,6 +99,14 @@ export async function loginAction(
     return { error: 'Correo o contraseña incorrectos' }
   }
 
+  if (usuario.bloqueado) {
+    return {
+      error: usuario.motivo_bloqueo
+        ? `Tu cuenta está bloqueada. Motivo: ${usuario.motivo_bloqueo}`
+        : 'Tu cuenta está bloqueada. Contacta al equipo de Rentify.',
+    }
+  }
+
   await prisma.usuario.update({
     where: { id: usuario.id },
     data: { ultimo_acceso: new Date() },
