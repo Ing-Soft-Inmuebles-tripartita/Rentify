@@ -40,6 +40,13 @@ export async function crearSolicitudAction(
     return { error: 'La publicación no existe' }
   }
 
+  if (
+    publicacion.estado !== 'activa' ||
+    publicacion.inmueble.estado_inventario !== 'disponible'
+  ) {
+    return { error: 'Esta propiedad ya no está disponible para solicitudes' }
+  }
+
   if (publicacion.inmueble.propietario_id === usuario.id) {
     return { error: 'No puedes solicitar tu propia propiedad' }
   }

@@ -95,15 +95,25 @@ export async function crearEvaluacionAction(
     if (tipo_evaluacion === 'inmueble') {
       const evaluaciones = await prisma.evaluacion.findMany({
         where: {
-          experiencia_renta_id: { in: await prisma.experienciaRenta.findMany({
-            where: { solicitud: { publicacion: { inmueble_id: experiencia.solicitud.publicacion.inmueble_id } } },
-            select: { id: true },
-          }).then(r => r.map(e => e.id)) },
+          experiencia_renta_id: {
+            in: await prisma.experienciaRenta.findMany({
+              where: {
+                solicitud: {
+                  publicacion: {
+                    inmueble_id: experiencia.solicitud.publicacion.inmueble_id,
+                  },
+                },
+              },
+              select: { id: true },
+            }).then((experiencias) => experiencias.map(({ id }) => id)),
+          },
           tipo_evaluacion: 'inmueble',
         },
       })
 
-      const promedio = evaluaciones.reduce((acc, e) => acc + e.calificacion, 0) / evaluaciones.length
+      const promedio =
+        evaluaciones.reduce((acc, evaluacion) => acc + evaluacion.calificacion, 0) /
+        evaluaciones.length
 
       await prisma.inmueble.update({
         where: { id: experiencia.solicitud.publicacion.inmueble_id },

@@ -515,16 +515,24 @@ export default async function PropiedadContent({ params }: Props) {
                   </div>
                 </div>
 
-                <SolicitarRentaButton
-                  publicacionId={publicacion.id}
-                  titulo={publicacion.inmueble.tipo_inmueble}
-                  usuarioNombre={usuario?.nombre && usuario?.apellido ? `${usuario.nombre} ${usuario.apellido}` : undefined}
-                  usuarioTelefono={usuario?.telefono || undefined}
-                />
-
-                <p className="text-center text-[11px] text-on-surface-variant">
-                  No se te cobrará nada hoy. Revisión de perfil en 24 hrs.
-                </p>
+                {publicacion.estado === 'activa' &&
+                publicacion.inmueble.estado_inventario === 'disponible' ? (
+                  <>
+                    <SolicitarRentaButton
+                      publicacionId={publicacion.id}
+                      titulo={publicacion.inmueble.tipo_inmueble}
+                      usuarioNombre={usuario?.nombre && usuario?.apellido ? `${usuario.nombre} ${usuario.apellido}` : undefined}
+                      usuarioTelefono={usuario?.telefono || undefined}
+                    />
+                    <p className="text-center text-[11px] text-on-surface-variant">
+                      No se te cobrará nada hoy. Revisión de perfil en 24 hrs.
+                    </p>
+                  </>
+                ) : (
+                  <p className="rounded-xl bg-surface-canvas p-3 text-center text-sm font-medium text-on-surface-variant">
+                    Esta propiedad no está disponible actualmente.
+                  </p>
+                )}
 
                 <div className="pt-4 border-t border-gray-100">
                   <p className="text-xs text-on-surface-variant mb-2">Propietario</p>

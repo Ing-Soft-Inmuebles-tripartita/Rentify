@@ -1,10 +1,28 @@
-import Image from 'next/image'
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Home, FileText, Plus, Eye, ShieldCheck, Calendar, Star } from 'lucide-react'
+import Image from 'next/image'
+import {
+  Home,
+  FileText,
+  Plus,
+  Eye,
+  ShieldCheck,
+  Calendar,
+  Star,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import SolicitudRecibidaCard from './SolicitudRecibidaCard'
+import { cambiarEstadoInmuebleAction, eliminarInmuebleAction } from '@/app/actions/inmuebles'
+
+const ESTADOS = [
+  { value: 'disponible', label: 'Disponible' },
+  { value: 'en_negociacion', label: 'En negociación' },
+  { value: 'rentado', label: 'Rentado' },
+  { value: 'pausado', label: 'Pausado' },
+]
 
 async function DashboardContent() {
   const usuario = await getCurrentUser()
@@ -209,26 +227,38 @@ async function DashboardContent() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {misInmuebles.map((inm) => (
-                <div key={inm.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
+                <div key={inm.id} className="bg-white rounded-xl overflow-hidden shadow-sm flex flex-col">
                   {inm.publicaciones[0]?.fotos[0] && (
-                    <div className="relative w-full h-36 overflow-hidden">
-                      <Image
-                        src={inm.publicaciones[0].fotos[0].ruta_archivo}
-                        alt={inm.tipo_inmueble}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                      />
-                    </div>
+                    <Image
+                      src={inm.publicaciones[0].fotos[0].ruta_archivo}
+                      alt={inm.tipo_inmueble}
+                      width={480}
+                      height={144}
+                      unoptimized
+                      className="w-full h-36 object-cover"
+                    />
                   )}
-                  <div className="p-4">
+                  <div className="p-4 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-bold text-primary text-sm">
                         {inm.tipo_inmueble}
                       </h3>
-                      <span
-                        className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    </div>
+                    <p className="text-xs text-on-surface-variant truncate">{inm.direccion}</p>
+                    {inm.publicaciones[0] && (
+                      <p className="text-sm font-semibold text-secondary mt-2">
+                        ${inm.publicaciones[0].precio_renta.toLocaleString('en-US')} MXN
+                      </p>
+                    )}
+
+                    {/* Cambiar estado */}
+                    <form action={cambiarEstadoInmuebleAction} className="mt-3">
+                      <input type="hidden" name="inmueble_id" value={inm.id} />
+                      <select
+                        name="estado"
+                        defaultValue={inm.estado_inventario}
+                        onChange={(e) => e.target.form?.requestSubmit()}
+                        className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer border-0 ${
                           inm.estado_inventario === 'disponible'
                             ? 'bg-green-100 text-green-700'
                             : inm.estado_inventario === 'en_negociacion'
@@ -238,15 +268,33 @@ async function DashboardContent() {
                             : 'bg-gray-100 text-gray-700'
                         }`}
                       >
-                        {inm.estado_inventario}
-                      </span>
+                        {ESTADOS.map((e) => (
+                          <option key={e.value} value={e.value}>
+                            {e.label}
+                          </option>
+                        ))}
+                      </select>
+                    </form>
+
+                    {/* Acciones */}
+                    <div className="flex gap-2 mt-3">
+                      <Link
+                        href={`/dashboard/editar-propiedad/${inm.id}`}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-surface-canvas hover:bg-surface-container text-xs font-semibold text-primary transition"
+                      >
+                        <Pencil size={12} /> Editar
+                      </Link>
+                      <form action={eliminarInmuebleAction}>
+                        <input type="hidden" name="inmueble_id" value={inm.id} />
+                        <button
+                          type="submit"
+                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </form>
                     </div>
-                    <p className="text-xs text-on-surface-variant truncate">{inm.direccion}</p>
-                    {inm.publicaciones[0] && (
-                      <p className="text-sm font-semibold text-secondary mt-2">
-                        ${inm.publicaciones[0].precio_renta.toLocaleString('en-US')} MXN
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -368,16 +416,14 @@ async function DashboardContent() {
               {misSolicitudes.map((sol) => (
                 <div key={sol.id} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
                   {sol.publicacion.fotos[0] && (
-                    <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                      <Image
-                        src={sol.publicacion.fotos[0].ruta_archivo}
-                        alt=""
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="64px"
-                      />
-                    </div>
+                    <Image
+                      src={sol.publicacion.fotos[0].ruta_archivo}
+                      alt=""
+                      width={64}
+                      height={64}
+                      unoptimized
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-primary text-sm truncate">
@@ -405,7 +451,6 @@ async function DashboardContent() {
         </div>
       )}
 
-      {/* Sin actividad */}
       {!usuario.propietario && !usuario.inquilino && !usuario.administrador && (
         <div className="bg-white rounded-xl p-8 shadow-sm text-center">
           <p className="text-on-surface-variant mb-2">Aún no tienes actividad en Rentify</p>

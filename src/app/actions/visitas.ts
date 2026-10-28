@@ -61,6 +61,13 @@ export async function agendarVisitaAction(
     return { error: 'La publicación no existe' }
   }
 
+  if (
+    publicacion.estado !== 'activa' ||
+    publicacion.inmueble.estado_inventario !== 'disponible'
+  ) {
+    return { error: 'Esta propiedad ya no está disponible para agendar visitas' }
+  }
+
   if (publicacion.inmueble.propietario_id === usuario.id) {
     return { error: 'No puedes agendar una visita a tu propia propiedad' }
   }

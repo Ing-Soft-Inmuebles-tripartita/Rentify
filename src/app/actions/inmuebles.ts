@@ -1,0 +1,250 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
+
+export interface EditarInmuebleState {
+  error?: string
+  success?: boolean
+  mensaje?: string
+}
+
+// ==================== VERIFICAR PROPIETARIO ====================
+async function verificarPropietario(inmueble_id: number) {
+  const usuario = await getCurrentUser()
+  if (!usuario || !usuario.propietario) {
+    throw new Error('No autorizado')
+  }
+
+  const inmueble = await prisma.inmueble.findUnique({
+    where: { id: inmueble_id },
+    include: {
+      publicaciones: { take: 1, orderBy: { fecha_publicacion: 'desc' } },
+    },
+  })
+
+  if (!inmueble) throw new Error('Inmueble no encontrado')
+  if (inmueble.propietario_id !== usuario.propietario.usuario_id) {
+    throw new Error('No tienes permiso para modificar este inmueble')
+  }
+
+  return { usuario, inmueble }
+}
+
+// ==================== EDITAR PROPIEDAD ====================
+export async function editarInmuebleAction(
+  prevState: EditarInmuebleState,
+  formData: FormData
+): Promise<EditarInmuebleState> {
+  const inmueble_id = Number(formData.get('inmueble_id'))
+
+  if (!Number.isInteger(inmueble_id) || inmueble_id <= 0) {
+    return { error: 'ID inválido' }
+  }
+
+  try {
+    const { inmueble } = await verificarPropietario(inmueble_id)
+
+    const tipo_inmueble = String(formData.get('tipo_inmueble') ?? '').trim()
+    const direccion = String(formData.get('direccion') ?? '').trim()
+    const numero_habitaciones = Number(formData.get('numero_habitaciones'))
+    const numero_banos = Number(formData.get('numero_banos'))
+    const metros_cuadrados = Number(formData.get('metros_cuadrados'))
+    const precio_renta = Number(formData.get('precio_renta'))
+    const deposito = Number(formData.get('deposito'))
+    const descripcion = String(formData.get('descripcion') ?? '').trim()
+    const reglas = String(formData.get('reglas') ?? '').trim()
+    const servicios_incluidos = String(formData.get('servicios_incluidos') ?? '').trim()
+    const plazo_minimo_meses = Number(formData.get('plazo_minimo_meses'))
+    const mantenimiento_incluido = formData.get('mantenimiento_incluido') === 'on'
+    const imagenes = formData
+      .getAll('imagenes')
+      .filter((url): url is string => typeof url === 'string' && url.trim() !== '')
+      .map((url) => url.trim())
+
+    if (!tipo_inmueble || !direccion || !descripcion) {
+      return { error: 'Todos los campos obligatorios deben estar completos' }
+    }
+
+    if (
+      !Number.isInteger(numero_habitaciones) ||
+      numero_habitaciones < 1 ||
+      !Number.isInteger(numero_banos) ||
+      numero_banos < 1 ||
+      !Number.isFinite(metros_cuadrados) ||
+      metros_cuadrados <= 0
+    ) {
+      return { error: 'Revisa el número de habitaciones, baños y metros cuadrados' }
+    }
+
+    if (
+      !Number.isFinite(precio_renta) ||
+      precio_renta <= 0 ||
+      !Number.isFinite(deposito) ||
+      deposito < 0
+    ) {
+      return { error: 'La renta debe ser mayor a 0 y el depósito no puede ser negativo' }
+    }
+
+    if (![6, 12].includes(plazo_minimo_meses)) {
+      return { error: 'Selecciona un plazo mínimo válido' }
+    }
+
+    if (imagenes.length > 6) {
+      return { error: 'Puedes agregar un máximo de 6 imágenes' }
+    }
+
+    const imagenesInvalidas = imagenes.some((url) => {
+      try {
+        const parsedUrl = new URL(url)
+        return parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:'
+      } catch {
+        return true
+      }
+    })
+
+    if (imagenesInvalidas) {
+      return { error: 'Revisa que las URLs de las imágenes sean válidas' }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.inmueble.update({
+        where: { id: inmueble_id },
+        data: {
+          tipo_inmueble,
+          direccion,
+          numero_habitaciones,
+          numero_banos,
+          metros_cuadrados,
+          servicios_incluidos: servicios_incluidos || null,
+          plazo_minimo_meses,
+          mantenimiento_incluido,
+        },
+      })
+
+      const publicacion = inmueble.publicaciones[0]
+        ? await tx.publicacion.update({
+          where: { id: inmueble.publicaciones[0].id },
+          data: {
+            precio_renta,
+            deposito,
+            descripcion,
+            reglas: reglas || null,
+          },
+        })
+        : await tx.publicacion.create({
+          data: {
+            inmueble_id,
+            precio_renta,
+            deposito,
+            descripcion,
+            reglas: reglas || null,
+            estado: 'activa',
+          },
+        })
+
+      await tx.foto.deleteMany({
+        where: { publicacion_id: publicacion.id },
+      })
+
+      if (imagenes.length > 0) {
+        await tx.foto.createMany({
+          data: imagenes.map((ruta_archivo, index) => ({
+            publicacion_id: publicacion.id,
+            ruta_archivo,
+            orden: index + 1,
+          })),
+        })
+      }
+    })
+
+    revalidatePath('/dashboard')
+    if (inmueble.publicaciones[0]) {
+      revalidatePath(`/propiedad/${inmueble.publicaciones[0].id}`)
+    }
+    revalidatePath('/propiedades')
+    revalidatePath('/')
+
+    return { success: true, mensaje: 'Propiedad actualizada correctamente' }
+  } catch (error) {
+    console.error('Error al editar inmueble:', error)
+    return {
+      error: error instanceof Error ? error.message : 'Error al actualizar la propiedad',
+    }
+  }
+}
+
+// ==================== CAMBIAR ESTADO DE INVENTARIO ====================
+export async function cambiarEstadoInmuebleAction(formData: FormData) {
+  const inmueble_id = Number(formData.get('inmueble_id'))
+  const nuevo_estado = String(formData.get('estado') ?? '')
+
+  if (!Number.isInteger(inmueble_id) || inmueble_id <= 0) {
+    throw new Error('ID de inmueble inválido')
+  }
+
+  const estadosValidos = ['disponible', 'en_negociacion', 'rentado', 'pausado']
+  if (!estadosValidos.includes(nuevo_estado)) {
+    throw new Error('Estado de inmueble inválido')
+  }
+
+  try {
+    await verificarPropietario(inmueble_id)
+    await prisma.inmueble.update({
+      where: { id: inmueble_id },
+      data: { estado_inventario: nuevo_estado },
+    })
+
+    revalidatePath('/dashboard')
+    revalidatePath('/propiedades')
+  } catch (error) {
+    console.error('Error al cambiar estado:', error)
+    throw error
+  }
+}
+
+// ==================== ELIMINAR PROPIEDAD (SOFT DELETE) ====================
+export async function eliminarInmuebleAction(formData: FormData) {
+  const inmueble_id = Number(formData.get('inmueble_id'))
+
+  if (!Number.isInteger(inmueble_id) || inmueble_id <= 0) {
+    throw new Error('ID de inmueble inválido')
+  }
+
+  try {
+    await verificarPropietario(inmueble_id)
+
+    await prisma.$transaction(async (tx) => {
+      const solicitudesActivas = await tx.solicitudRenta.count({
+        where: {
+          publicacion: { inmueble_id },
+          estado: { in: ['pendiente', 'aprobada'] },
+        },
+      })
+
+      if (solicitudesActivas > 0) {
+        throw new Error(
+          'No puedes eliminar un inmueble con solicitudes pendientes o aprobadas. Resuélvelas antes de eliminarlo.'
+        )
+      }
+
+      await tx.publicacion.updateMany({
+        where: { inmueble_id },
+        data: { estado: 'eliminada' },
+      })
+
+      await tx.inmueble.update({
+        where: { id: inmueble_id },
+        data: { estado_inventario: 'pausado' },
+      })
+    })
+
+    revalidatePath('/dashboard')
+    revalidatePath('/propiedades')
+    revalidatePath('/')
+  } catch (error) {
+    console.error('Error al eliminar inmueble:', error)
+    throw error
+  }
+}

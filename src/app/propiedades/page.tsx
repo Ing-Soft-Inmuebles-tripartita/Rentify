@@ -25,7 +25,9 @@ async function getPropiedades(
   const where: Prisma.PublicacionWhereInput = {
     estado: 'activa',
   }
-  const inmuebleWhere: Prisma.InmuebleWhereInput = {}
+  const inmuebleWhere: Prisma.InmuebleWhereInput = {
+    estado_inventario: 'disponible',
+  }
 
   if (ubicacion) {
     inmuebleWhere.direccion = {
@@ -52,9 +54,7 @@ async function getPropiedades(
     }
   }
 
-  if (Object.keys(inmuebleWhere).length > 0) {
-    where.inmueble = { is: inmuebleWhere }
-  }
+  where.inmueble = { is: inmuebleWhere }
 
   const publicaciones = await prisma.publicacion.findMany({
     where,
