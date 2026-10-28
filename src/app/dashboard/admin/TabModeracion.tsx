@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { Eye, Ban, CheckCircle2, XCircle, MapPin, User, Calendar } from 'lucide-react'
 import { suspenderPublicacionAction, reactivarPublicacionAction, eliminarPublicacionAction } from '@/app/actions/admin'
@@ -27,8 +28,17 @@ export interface PublicacionAdmin {
   _count: { reportes: number }
 }
 
+const filtros = [
+  { value: 'todas', label: 'Todas' },
+  { value: 'activa', label: 'Activas' },
+  { value: 'suspendida', label: 'Suspendidas' },
+  { value: 'eliminada', label: 'Eliminadas' },
+] as const
+
+type Filtro = (typeof filtros)[number]['value']
+
 export default function TabModeracion({ publicaciones }: { publicaciones: PublicacionAdmin[] }) {
-  const [filtro, setFiltro] = useState<'todas' | 'activa' | 'suspendida' | 'eliminada'>('todas')
+  const [filtro, setFiltro] = useState<Filtro>('todas')
   const [modalSuspender, setModalSuspender] = useState<number | null>(null)
   const [motivo, setMotivo] = useState('')
 
@@ -39,15 +49,10 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
-        {[
-          { value: 'todas', label: 'Todas' },
-          { value: 'activa', label: 'Activas' },
-          { value: 'suspendida', label: 'Suspendidas' },
-          { value: 'eliminada', label: 'Eliminadas' },
-        ].map((f) => (
+        {filtros.map((f) => (
           <button
             key={f.value}
-            onClick={() => setFiltro(f.value as any)}
+            onClick={() => setFiltro(f.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               filtro === f.value
                 ? 'bg-primary text-white'
@@ -73,12 +78,15 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
               key={pub.id}
               className="border border-gray-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 hover:shadow-sm transition"
             >
-              <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden bg-surface-canvas flex-shrink-0">
+              <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden bg-surface-canvas flex-shrink-0 relative">
                 {pub.fotos[0] ? (
-                  <img
+                  <Image
                     src={pub.fotos[0].ruta_archivo}
                     alt={pub.inmueble.tipo_inmueble}
-                    className="w-full h-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, 128px"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">

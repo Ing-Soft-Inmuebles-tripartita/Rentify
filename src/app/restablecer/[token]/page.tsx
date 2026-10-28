@@ -1,7 +1,5 @@
 export const instant = false
 
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import RestablecerForm from './RestablecerForm'
 

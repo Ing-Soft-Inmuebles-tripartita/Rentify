@@ -5,6 +5,9 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AdminTabs from './AdminTabs'
+import type { PublicacionAdmin } from './TabModeracion'
+import type { DocumentoAdmin } from './TabVerificaciones'
+import type { ReporteAdmin } from './TabReportes'
 
 async function AdminContent() {
   const usuario = await getCurrentUser()
@@ -112,9 +115,9 @@ async function AdminContent() {
       </div>
 
       <AdminTabs
-        publicaciones={publicaciones as any}
-        documentos={documentos as any}
-        reportes={reportes as any}
+        publicaciones={publicaciones as PublicacionAdmin[]}
+        documentos={documentos as DocumentoAdmin[]}
+        reportes={reportes as ReporteAdmin[]}
       />
     </div>
   )

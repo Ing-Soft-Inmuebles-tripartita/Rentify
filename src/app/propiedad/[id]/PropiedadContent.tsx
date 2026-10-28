@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Image from 'next/image'
 import {
   ChevronRight,
   MapPin,
@@ -22,11 +22,11 @@ import {
   Dumbbell,
   Monitor,
   Sparkles,
-  Calendar,
   Home,
   Bike,
   ShoppingCart,
   Coffee,
+  type LucideIcon,
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import SolicitarRentaButton from './SolicitarRentaButton'
@@ -39,7 +39,7 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-const ICONOS_CARACTERISTICAS: Record<string, any> = {
+const ICONOS_CARACTERISTICAS: Record<string, LucideIcon> = {
   'Internet de Alta Velocidad': Wifi,
   'Cocina Integral Equipada': ChefHat,
   'A/C Inverter': Wind,
@@ -165,10 +165,13 @@ export default async function PropiedadContent({ params }: Props) {
           <div className="relative w-full rounded-2xl overflow-hidden shadow-md mb-8">
             <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-2 h-[420px] md:h-[540px]">
               <div className="md:col-span-2 md:row-span-2 relative overflow-hidden bg-surface-container">
-                <img
+                <Image
                   src={imagenPrincipal}
                   alt={publicacion.inmueble.tipo_inmueble}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform duration-500 hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 66vw"
                 />
                 <div className="absolute top-4 left-4 bg-primary/80 backdrop-blur-md text-white px-3 py-1 rounded-lg text-xs">
                   Sala principal & Ventanales
@@ -179,10 +182,13 @@ export default async function PropiedadContent({ params }: Props) {
                   key={idx}
                   className="hidden md:block col-span-1 row-span-1 relative overflow-hidden bg-surface-container"
                 >
-                  <img
+                  <Image
                     src={img}
                     alt={`Foto ${idx + 2}`}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-500 hover:scale-105"
+                    sizes="(max-width: 768px) 0px, 25vw"
                   />
                   <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-white/90 text-[11px] text-on-surface">
                     {['Cocina equipada', 'Recámara principal', 'Terraza privada', 'Baño en cantera'][idx]}

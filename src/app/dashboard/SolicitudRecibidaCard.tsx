@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useTransition } from 'react'
 import { Check, X, Clock } from 'lucide-react'
 import {
@@ -49,11 +50,16 @@ export default function SolicitudRecibidaCard({ solicitud }: Props) {
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-4">
-      <img
-        src={solicitud.imagen}
-        alt={solicitud.inmueble_tipo}
-        className="w-full md:w-24 h-24 rounded-lg object-cover"
-      />
+      <div className="relative w-full md:w-24 h-24 rounded-lg overflow-hidden">
+        <Image
+          src={solicitud.imagen}
+          alt={solicitud.inmueble_tipo}
+          fill
+          unoptimized
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 96px"
+        />
+      </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">

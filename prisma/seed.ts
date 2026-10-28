@@ -122,7 +122,7 @@ async function main() {
     },
   })
 
-  const adminUsuario = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
       nombre: 'Admin',
       apellido: 'Rentify',

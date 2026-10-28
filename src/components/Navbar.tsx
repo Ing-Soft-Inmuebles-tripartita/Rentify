@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { User, LayoutDashboard, LogOut, Settings, HelpCircle } from 'lucide-react'
+import { LayoutDashboard, LogOut, Settings, HelpCircle } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { logoutAction } from '@/app/actions/auth'
 

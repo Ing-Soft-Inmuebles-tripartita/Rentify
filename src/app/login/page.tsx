@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -59,10 +60,13 @@ export default function LoginPage() {
 
           <div className="my-8 space-y-5">
             <div className="relative w-full h-56 rounded-xl overflow-hidden shadow-md">
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 alt="Apartamento moderno"
-                className="w-full h-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 40vw"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">

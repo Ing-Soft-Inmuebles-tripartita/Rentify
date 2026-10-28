@@ -26,7 +26,6 @@ export async function agendarVisitaAction(
   const hora = formData.get('hora') as string    // HH:MM
   const modalidad = formData.get('modalidad') as string
   const nombre = formData.get('nombre') as string
-  const telefono = formData.get('telefono') as string
   const notas = formData.get('notas') as string
 
   if (!publicacion_id || isNaN(publicacion_id)) {

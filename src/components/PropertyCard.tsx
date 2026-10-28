@@ -1,5 +1,6 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, Bed, Bath, Car, Star, Heart, CheckCircle2 } from 'lucide-react'
+import { MapPin, Star, Heart, CheckCircle2 } from 'lucide-react'
 
 export interface PropertyProps {
   id: number
@@ -24,10 +25,13 @@ export default function PropertyCard({ property }: Props) {
     <div className="group bg-white rounded-2xl p-4 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
       <div>
         <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-surface-container">
-          <img
+          <Image
             src={property.imagen}
             alt={property.titulo}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            fill
+            unoptimized
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            sizes="(max-width: 768px) 100vw, 33vw"
           />
           <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
             <CheckCircle2 size={14} className={property.verificada ? 'text-status-success' : 'text-yellow-600'} />

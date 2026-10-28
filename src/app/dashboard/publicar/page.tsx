@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -473,13 +474,14 @@ export default function PublicarPage() {
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       {imagenesValidas.map((url, i) => (
                         <div key={i} className="relative aspect-video rounded-lg overflow-hidden bg-surface-canvas">
-                          <img
+                          <Image
                             src={url}
                             alt={`Foto ${i + 1}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                            sizes="(max-width: 768px) 33vw, 200px"
+                            onError={() => undefined}
                           />
                           {i === 0 && (
                             <span className="absolute top-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">
@@ -683,14 +685,13 @@ export default function PublicarPage() {
                 <div className="rounded-xl overflow-hidden bg-surface-container-lowest shadow-sm">
                   <div className="relative aspect-[4/3] overflow-hidden bg-surface-canvas">
                     {imagenesValidas[0] ? (
-                      <img
+                      <Image
                         src={imagenesValidas[0]}
                         alt="Portada"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            'https://via.placeholder.com/400x300?text=Imagen'
-                        }}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 320px"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-on-surface-variant">

@@ -11,8 +11,6 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 import { agendarVisitaAction, VisitaState } from '@/app/actions/visitas'
 

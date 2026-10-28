@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Home, FileText, Plus, Eye, ShieldCheck, Calendar, Star } from 'lucide-react'
@@ -210,11 +211,16 @@ async function DashboardContent() {
               {misInmuebles.map((inm) => (
                 <div key={inm.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
                   {inm.publicaciones[0]?.fotos[0] && (
-                    <img
-                      src={inm.publicaciones[0].fotos[0].ruta_archivo}
-                      alt={inm.tipo_inmueble}
-                      className="w-full h-36 object-cover"
-                    />
+                    <div className="relative w-full h-36 overflow-hidden">
+                      <Image
+                        src={inm.publicaciones[0].fotos[0].ruta_archivo}
+                        alt={inm.tipo_inmueble}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    </div>
                   )}
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
@@ -362,11 +368,16 @@ async function DashboardContent() {
               {misSolicitudes.map((sol) => (
                 <div key={sol.id} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
                   {sol.publicacion.fotos[0] && (
-                    <img
-                      src={sol.publicacion.fotos[0].ruta_archivo}
-                      alt=""
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                      <Image
+                        src={sol.publicacion.fotos[0].ruta_archivo}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-primary text-sm truncate">

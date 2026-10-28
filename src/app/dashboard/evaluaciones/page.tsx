@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Star } from 'lucide-react'
@@ -90,11 +91,16 @@ async function EvaluacionesContent() {
               return (
                 <div key={exp.id} className="bg-white rounded-xl p-4 shadow-sm">
                   <div className="flex items-start gap-4">
-                    <img
-                      src={exp.solicitud.publicacion.fotos[0]?.ruta_archivo || ''}
-                      alt=""
-                      className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                    />
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                      <Image
+                        src={exp.solicitud.publicacion.fotos[0]?.ruta_archivo || ''}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-primary truncate">
                         {exp.solicitud.publicacion.inmueble.tipo_inmueble}
@@ -173,7 +179,7 @@ async function EvaluacionesContent() {
                 </div>
                 {ev.comentario && (
                   <p className="text-xs text-on-surface-variant mt-2 italic">
-                    "{ev.comentario}"
+                    &ldquo;{ev.comentario}&rdquo;
                   </p>
                 )}
                 <p className="text-[10px] text-on-surface-variant mt-2">
