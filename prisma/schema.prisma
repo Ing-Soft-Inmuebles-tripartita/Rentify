@@ -42,6 +42,10 @@ model Usuario {
   evaluaciones     Evaluacion[]   @relation("UsuarioEvaluador")
   documentos       Documento[]
   resenas_escritas Resena[]
+  calificacion_promedio_como_propietario Float @default(0)
+  total_evaluaciones_como_propietario     Int   @default(0)
+  calificacion_promedio_como_inquilino    Float @default(0)
+  total_evaluaciones_como_inquilino       Int   @default(0)
 }
 
 model Propietario {
@@ -94,6 +98,8 @@ model Inmueble {
   caracteristicas     InmuebleCaracteristica[]
   documentos          Documento[]
   publicaciones       Publicacion[]
+  calificacion_promedio Float @default(0)
+  total_evaluaciones    Int   @default(0)
 }
 
 model Caracteristica {

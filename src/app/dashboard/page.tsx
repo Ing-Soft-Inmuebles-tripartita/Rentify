@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Home, FileText, Plus, Eye, ShieldCheck, Calendar } from 'lucide-react'
+import { Home, FileText, Plus, Eye, ShieldCheck, Calendar, Star } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import SolicitudRecibidaCard from './SolicitudRecibidaCard'
@@ -9,7 +9,6 @@ async function DashboardContent() {
   const usuario = await getCurrentUser()
   if (!usuario) return null
 
-  // Cada bloque de datos se consulta solo para el perfil que puede mostrarlo en el panel.
   const misSolicitudes = usuario.inquilino
     ? await prisma.solicitudRenta.findMany({
         where: { inquilino_id: usuario.inquilino.usuario_id },
@@ -114,7 +113,8 @@ async function DashboardContent() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Acciones rápidas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
           href="/propiedades"
           className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition flex items-center gap-4"
@@ -140,20 +140,28 @@ async function DashboardContent() {
             <p className="text-sm text-white/80">Sube tu primer inmueble</p>
           </div>
         </Link>
+
+        <Link
+          href="/dashboard/evaluaciones"
+          className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition flex items-center gap-4"
+        >
+          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+            <Star size={24} className="text-rating-gold fill-rating-gold" />
+          </div>
+          <div>
+            <p className="font-bold text-primary">Mis evaluaciones</p>
+            <p className="text-sm text-on-surface-variant">Califica tus rentas</p>
+          </div>
+        </Link>
       </div>
 
+      {/* Panel Admin */}
       {usuario.administrador && (
         <div>
           <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
             <ShieldCheck size={22} /> Panel de administración
           </h2>
-          <Link
-            href="/dashboard/admin"
-            className="mb-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-secondary"
-          >
-            Abrir herramientas de administración
-          </Link>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="text-xs text-on-surface-variant">Usuarios</p>
               <p className="text-2xl font-bold text-primary">{statsAdmin.usuarios}</p>
@@ -171,9 +179,16 @@ async function DashboardContent() {
               <p className="text-2xl font-bold text-red-600">{statsAdmin.reportes}</p>
             </div>
           </div>
+          <Link
+            href="/dashboard/admin"
+            className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl hover:bg-secondary transition font-semibold text-sm"
+          >
+            <ShieldCheck size={18} /> Ir al panel de administración
+          </Link>
         </div>
       )}
 
+      {/* Mis inmuebles */}
       {usuario.propietario && (
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -202,13 +217,28 @@ async function DashboardContent() {
                     />
                   )}
                   <div className="p-4">
-                    <h3 className="font-bold text-primary text-sm">
-                      {inm.tipo_inmueble}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-primary text-sm">
+                        {inm.tipo_inmueble}
+                      </h3>
+                      <span
+                        className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${
+                          inm.estado_inventario === 'disponible'
+                            ? 'bg-green-100 text-green-700'
+                            : inm.estado_inventario === 'en_negociacion'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : inm.estado_inventario === 'rentado'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {inm.estado_inventario}
+                      </span>
+                    </div>
                     <p className="text-xs text-on-surface-variant truncate">{inm.direccion}</p>
                     {inm.publicaciones[0] && (
                       <p className="text-sm font-semibold text-secondary mt-2">
-                        ${inm.publicaciones[0].precio_renta.toLocaleString()} MXN
+                        ${inm.publicaciones[0].precio_renta.toLocaleString('en-US')} MXN
                       </p>
                     )}
                   </div>
@@ -219,6 +249,7 @@ async function DashboardContent() {
         </div>
       )}
 
+      {/* Solicitudes recibidas */}
       {usuario.propietario && solicitudesRecibidas.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -250,6 +281,7 @@ async function DashboardContent() {
         </div>
       )}
 
+      {/* Visitas agendadas */}
       {usuario.propietario && visitasRecibidas.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -292,7 +324,9 @@ async function DashboardContent() {
                   className={`px-3 py-1 rounded-full text-xs font-medium ${
                     visita.estado === 'agendada'
                       ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-green-100 text-green-700'
+                      : visita.estado === 'completada'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
                   }`}
                 >
                   {visita.estado}
@@ -303,6 +337,7 @@ async function DashboardContent() {
         </div>
       )}
 
+      {/* Mis solicitudes */}
       {usuario.inquilino && (
         <div>
           <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -359,6 +394,7 @@ async function DashboardContent() {
         </div>
       )}
 
+      {/* Sin actividad */}
       {!usuario.propietario && !usuario.inquilino && !usuario.administrador && (
         <div className="bg-white rounded-xl p-8 shadow-sm text-center">
           <p className="text-on-surface-variant mb-2">Aún no tienes actividad en Rentify</p>

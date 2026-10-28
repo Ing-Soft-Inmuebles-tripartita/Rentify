@@ -481,6 +481,36 @@ async function main() {
   console.log('✅ Notificaciones de prueba creadas')
 
   console.log('')
+    // ==================== EXPERIENCIA DE RENTA PARA EVALUACIONES ====================
+  
+  // Crear una renta ya concretada entre Ana y Carlos para poder evaluar
+  const publicacionLoft = await prisma.publicacion.findFirst({
+    where: { inmueble: { tipo_inmueble: { contains: 'Loft' } } },
+  })
+
+  if (publicacionLoft && inquilinoUsuario.inquilino) {
+    // Primero necesitamos una solicitud aprobada
+    const solicitudAprobada = await prisma.solicitudRenta.create({
+      data: {
+        inquilino_id: inquilinoUsuario.inquilino.usuario_id,
+        publicacion_id: publicacionLoft.id,
+        estado: 'aprobada',
+        mensaje: 'Solicitud aprobada de prueba para evaluaciones',
+      },
+    })
+
+    // Crear la experiencia de renta (renta ya concretada)
+    await prisma.experienciaRenta.create({
+      data: {
+        solicitud_id: solicitudAprobada.id,
+        fecha_inicio: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // hace 3 meses
+        fecha_fin: new Date(Date.now() + 275 * 24 * 60 * 60 * 1000), // en 9 meses
+        estado: 'activa',
+      },
+    })
+
+    console.log('✅ Experiencia de renta creada para evaluaciones')
+  }
   console.log('🎉 Seed completado exitosamente!')
   console.log('')
   console.log('📊 Resumen:')

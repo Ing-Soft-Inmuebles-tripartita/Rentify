@@ -106,9 +106,9 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-primary">
-                      ${pub.precio_renta.toLocaleString()}
-                    </p>
+<p className="text-sm font-bold text-primary">
+  ${pub.precio_renta.toLocaleString('en-US')}
+</p>
                     <span
                       className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${
                         pub.estado === 'activa'
