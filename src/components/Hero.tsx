@@ -15,6 +15,8 @@ export default function Hero() {
     const params = new URLSearchParams()
     if (ubicacion) params.set('ubicacion', ubicacion)
     if (presupuesto) params.set('precio', presupuesto)
+    if (tipo) params.set('tipo', tipo)
+    if (habitaciones) params.set('habitaciones', habitaciones)
     router.push(`/propiedades?${params.toString()}`)
   }
 
@@ -42,7 +44,7 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 max-w-2xl font-light mb-10 leading-relaxed">
-            Renta departamentos y casas verificadas en las mejores zonas de Guadalajara
+            Renta departamentos y casas en las mejores zonas de Guadalajara
             sin aval complicado ni trámites obsoletos.
           </p>
 

@@ -15,6 +15,6 @@ export function estaExpirado(fechaExpiracion: Date | null): boolean {
 }
 
 export function hashToken(token: string): string {
-  // Permite guardar una huella del token en vez del valor original cuando se integra en un flujo.
+  // La base de datos conserva solo esta huella; el token original se comparte únicamente con el usuario.
   return createHash('sha256').update(token).digest('hex')
 }

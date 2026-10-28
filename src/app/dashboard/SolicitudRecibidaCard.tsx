@@ -73,7 +73,7 @@ export default function SolicitudRecibidaCard({ solicitud }: Props) {
         </p>
         {solicitud.mensaje && (
           <p className="text-sm text-gray-500 mt-1 italic">
-            "{solicitud.mensaje}"
+            &quot;{solicitud.mensaje}&quot;
           </p>
         )}
         <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">

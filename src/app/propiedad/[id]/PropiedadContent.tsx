@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { LucideIcon } from 'lucide-react'
 import {
   ChevronRight,
   MapPin,
@@ -22,7 +22,6 @@ import {
   Dumbbell,
   Monitor,
   Sparkles,
-  Calendar,
   Home,
   Bike,
   ShoppingCart,
@@ -38,7 +37,7 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-const ICONOS_CARACTERISTICAS: Record<string, any> = {
+const ICONOS_CARACTERISTICAS: Record<string, LucideIcon> = {
   'Internet de Alta Velocidad': Wifi,
   'Cocina Integral Equipada': ChefHat,
   'A/C Inverter': Wind,
@@ -96,6 +95,9 @@ export default async function PropiedadDetalle({ params }: Props) {
 
   const calificacion = publicacion.calificacion_promedio || 0
   const totalResenas = publicacion.total_resenas || 0
+  const propiedadVerificada =
+    publicacion.inmueble.documento_verificado &&
+    publicacion.inmueble.propietario.estado_verificacion === 'verificado'
 
   return (
     <main className="min-h-screen bg-surface">
@@ -127,8 +129,13 @@ export default async function PropiedadDetalle({ params }: Props) {
           {/* Título */}
           <div className="flex flex-col gap-2 pb-6">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-semibold">
-                <CheckCircle2 size={14} /> Verificado Rentify
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                propiedadVerificada
+                  ? 'bg-secondary-container text-on-secondary-container'
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                <CheckCircle2 size={14} />
+                {propiedadVerificada ? 'Verificado Rentify' : 'Verificación pendiente'}
               </span>
               <span className="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant px-2.5 py-1 rounded-full text-[11px]">
                 <Lock size={12} className="text-status-success" /> Contrato Digital
@@ -239,16 +246,27 @@ export default async function PropiedadDetalle({ params }: Props) {
                           {publicacion.inmueble.propietario.usuario.nombre}{' '}
                           {publicacion.inmueble.propietario.usuario.apellido}
                         </h3>
-                        <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                          Superanfitrión
-                        </span>
+                        {propiedadVerificada && (
+                          <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                            Propietario verificado
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-on-surface-variant">
-                        Arrendador certificado desde 2021
+                        {propiedadVerificada
+                          ? 'Documentación del inmueble y del propietario verificada'
+                          : 'La documentación del propietario o del inmueble está pendiente de revisión'}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant">
-                        <span className="text-status-success flex items-center gap-1">
-                          <CheckCircle2 size={12} /> Responde en menos de 1 hora
+                        <span className={`flex items-center gap-1 ${
+                          publicacion.inmueble.propietario.estado_verificacion === 'verificado'
+                            ? 'text-status-success'
+                            : 'text-yellow-700'
+                        }`}>
+                          <CheckCircle2 size={12} />
+                          {publicacion.inmueble.propietario.estado_verificacion === 'verificado'
+                            ? 'Identidad del propietario verificada'
+                            : 'Identidad del propietario pendiente de verificación'}
                         </span>
                       </div>
                     </div>
@@ -256,16 +274,26 @@ export default async function PropiedadDetalle({ params }: Props) {
                 </div>
                 <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3 bg-surface-canvas p-4 rounded-xl">
                   <div className="flex items-center gap-2 text-xs text-on-surface">
-                    <CheckCircle2 size={16} className="text-status-success" />
-                    Identidad validada INE
+                    <CheckCircle2
+                      size={16}
+                      className={publicacion.inmueble.propietario.estado_verificacion === 'verificado' ? 'text-status-success' : 'text-yellow-600'}
+                    />
+                    {publicacion.inmueble.propietario.estado_verificacion === 'verificado'
+                      ? 'Identidad del propietario verificada'
+                      : 'Identidad pendiente de revisión'}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-on-surface">
+                    <CheckCircle2
+                      size={16}
+                      className={publicacion.inmueble.documento_verificado ? 'text-status-success' : 'text-yellow-600'}
+                    />
+                    {publicacion.inmueble.documento_verificado
+                      ? 'Documentación del inmueble validada'
+                      : 'Documentación del inmueble pendiente'}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-on-surface">
                     <CheckCircle2 size={16} className="text-status-success" />
-                    Título en RPP validado
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-on-surface">
-                    <CheckCircle2 size={16} className="text-status-success" />
-                    14 contratos completados
+                    Publicación disponible en Rentify
                   </div>
                 </div>
               </div>

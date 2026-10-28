@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { User, Lock, Bell } from 'lucide-react'
+import type { Prisma } from '@prisma/client'
 import {
   actualizarPerfilAction,
   cambiarContrasenaAction,
@@ -17,7 +18,7 @@ interface Props {
     apellido: string
     telefono: string | null
     foto_perfil: string | null
-    preferencias_email: any
+    preferencias_email: Prisma.JsonValue | null
   }
 }
 
@@ -124,7 +125,11 @@ function TabSeguridad() {
 
 function TabPreferencias({ usuario }: Props) {
   const [state, formAction, isPending] = useActionState(actualizarPreferenciasAction, initialState)
-  const prefs = usuario.preferencias_email || {}
+  const preferencias = usuario.preferencias_email
+  const prefs =
+    preferencias && typeof preferencias === 'object' && !Array.isArray(preferencias)
+      ? preferencias
+      : {}
 
   return (
     <form action={formAction} className="space-y-4">

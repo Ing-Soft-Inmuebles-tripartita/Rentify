@@ -17,39 +17,46 @@ export async function publicarPropiedadAction(
   const usuario = await getCurrentUser()
   if (!usuario) return { error: 'Debes iniciar sesión para publicar' }
 
-  const tipo_inmueble = formData.get('tipo_inmueble') as string
-  const direccion = formData.get('direccion') as string
-  const numero_habitaciones = parseInt(formData.get('numero_habitaciones') as string)
-  const numero_banos = parseInt(formData.get('numero_banos') as string)
-  const metros_cuadrados = parseFloat(formData.get('metros_cuadrados') as string)
-  const precio_renta = parseFloat(formData.get('precio_renta') as string)
-  const deposito = parseFloat(formData.get('deposito') as string)
-  const descripcion = formData.get('descripcion') as string
-  const reglas = formData.get('reglas') as string
+  const tipo_inmueble = String(formData.get('tipo_inmueble') ?? '').trim()
+  const direccion = String(formData.get('direccion') ?? '').trim()
+  const numero_habitaciones = Number(formData.get('numero_habitaciones'))
+  const numero_banos = Number(formData.get('numero_banos'))
+  const metros_cuadrados = Number(formData.get('metros_cuadrados'))
+  const precio_renta = Number(formData.get('precio_renta'))
+  const deposito = Number(formData.get('deposito'))
+  const descripcion = String(formData.get('descripcion') ?? '').trim()
+  const reglas = String(formData.get('reglas') ?? '').trim()
   const mantenimientoIncluido = formData.get('mantenimiento_incluido') === 'on'
   const plazoMinimo = parseInt(formData.get('plazo_minimo_meses') as string) || 12
   const caracteristicasNombres = formData.getAll('caracteristicas') as string[]
   
   // Múltiples imágenes
-  const imagenes = formData.getAll('imagenes') as string[]
-  const imagenesValidas = imagenes.filter((url) => url && url.trim() !== '')
+  const imagenesValidas = formData
+    .getAll('imagenes')
+    .filter((url): url is string => typeof url === 'string' && url.trim() !== '')
+    .map((url) => url.trim())
 
-  if (
-    !tipo_inmueble ||
-    !direccion ||
-    !numero_habitaciones ||
-    !numero_banos ||
-    !metros_cuadrados ||
-    !precio_renta ||
-    !deposito ||
-    !descripcion ||
-    imagenesValidas.length === 0
-  ) {
-    return { error: 'Todos los campos obligatorios deben estar completos (incluye al menos 1 foto)' }
+  if (!tipo_inmueble || !direccion || !descripcion) {
+    return { error: 'Completa el tipo de inmueble, la dirección y la descripción.' }
   }
 
-  if (precio_renta <= 0 || deposito < 0) {
-    return { error: 'El precio y el depósito deben ser mayores a 0' }
+  if (
+    !Number.isInteger(numero_habitaciones) ||
+    numero_habitaciones < 1 ||
+    !Number.isInteger(numero_banos) ||
+    numero_banos < 1 ||
+    !Number.isFinite(metros_cuadrados) ||
+    metros_cuadrados <= 0
+  ) {
+    return { error: 'Revisa el número de habitaciones, baños y metros cuadrados.' }
+  }
+
+  if (!Number.isFinite(precio_renta) || precio_renta <= 0 || !Number.isFinite(deposito) || deposito < 0) {
+    return { error: 'La renta debe ser mayor a 0 y el depósito no puede ser negativo.' }
+  }
+
+  if (imagenesValidas.length === 0) {
+    return { error: 'Agrega al menos una imagen antes de publicar.' }
   }
 
   try {

@@ -1,39 +1,65 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Search } from 'lucide-react'
+import { MapPin, Search } from 'lucide-react'
+import type { Prisma } from '@prisma/client'
 import Navbar from '@/components/Navbar'
-import PropertyCard, { PropertyProps } from '@/components/PropertyCard'
+import PropertyCard from '@/components/PropertyCard'
 import { prisma } from '@/lib/prisma'
 
 interface Props {
-  searchParams: Promise<{ ubicacion?: string; precio?: string }>
+  searchParams: Promise<{
+    ubicacion?: string
+    precio?: string
+    tipo?: string
+    habitaciones?: string
+  }>
 }
 
-async function getPropiedades(ubicacion?: string, precio?: string) {
+async function getPropiedades(
+  ubicacion?: string,
+  precio?: string,
+  tipo?: string,
+  habitaciones?: string
+) {
   // Los filtros vienen de la URL para que la búsqueda se pueda compartir o recargar.
-  const where: any = {
+  const where: Prisma.PublicacionWhereInput = {
     estado: 'activa',
   }
+  const inmuebleWhere: Prisma.InmuebleWhereInput = {}
 
   if (ubicacion) {
-    where.inmueble = {
-      direccion: {
-        contains: ubicacion,
-        mode: 'insensitive',
-      },
+    inmuebleWhere.direccion = {
+      contains: ubicacion,
+      mode: 'insensitive',
     }
   }
 
   if (precio) {
-    where.precio_renta = {
-      lte: parseInt(precio),
+    const precioMaximo = Number(precio)
+    if (Number.isFinite(precioMaximo) && precioMaximo > 0) {
+      where.precio_renta = { lte: precioMaximo }
     }
+  }
+
+  if (tipo) {
+    inmuebleWhere.tipo_inmueble = { contains: tipo, mode: 'insensitive' }
+  }
+
+  if (habitaciones) {
+    const cantidad = Number(habitaciones)
+    if (Number.isInteger(cantidad) && cantidad > 0) {
+      inmuebleWhere.numero_habitaciones = cantidad === 3 ? { gte: 3 } : cantidad
+    }
+  }
+
+  if (Object.keys(inmuebleWhere).length > 0) {
+    where.inmueble = { is: inmuebleWhere }
   }
 
   const publicaciones = await prisma.publicacion.findMany({
     where,
     include: {
-      inmueble: true,
+      inmueble: { include: { propietario: true } },
       fotos: {
         orderBy: { orden: 'asc' },
         take: 1,
@@ -54,6 +80,9 @@ async function getPropiedades(ubicacion?: string, precio?: string) {
     estacionamiento: 1,
     metros: pub.inmueble.metros_cuadrados,
     tipo: pub.inmueble.tipo_inmueble,
+    verificada:
+      pub.inmueble.documento_verificado &&
+      pub.inmueble.propietario.estado_verificacion === 'verificado',
     imagen:
       pub.fotos[0]?.ruta_archivo ||
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
@@ -61,8 +90,17 @@ async function getPropiedades(ubicacion?: string, precio?: string) {
 }
 
 async function PropiedadesContent({ searchParams }: Props) {
-  const { ubicacion, precio } = await searchParams
-  const propiedades = await getPropiedades(ubicacion, precio)
+  const { ubicacion, precio, tipo, habitaciones } = await searchParams
+  const propiedades = await getPropiedades(ubicacion, precio, tipo, habitaciones)
+  const filtros = { ubicacion, precio, tipo, habitaciones }
+  const urlSinFiltro = (omitido: keyof typeof filtros) => {
+    const params = new URLSearchParams()
+    Object.entries(filtros).forEach(([key, value]) => {
+      if (key !== omitido && value) params.set(key, value)
+    })
+    const query = params.toString()
+    return query ? `/propiedades?${query}` : '/propiedades'
+  }
 
   return (
     <div className="flex flex-col w-full">
@@ -76,8 +114,9 @@ async function PropiedadesContent({ searchParams }: Props) {
                   <MapPin size={14} className="text-secondary" />
                   {ubicacion}
                   <Link
-                    href={`/propiedades${precio ? `?precio=${precio}` : ''}`}
+                    href={urlSinFiltro('ubicacion')}
                     className="ml-1 text-white/70 hover:text-white"
+                    aria-label="Quitar filtro de ubicación"
                   >
                     ×
                   </Link>
@@ -87,14 +126,31 @@ async function PropiedadesContent({ searchParams }: Props) {
                 <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold hover:bg-surface-container-high transition">
                   💰 Hasta ${parseInt(precio).toLocaleString()} MXN
                   <Link
-                    href={`/propiedades${ubicacion ? `?ubicacion=${ubicacion}` : ''}`}
+                    href={urlSinFiltro('precio')}
                     className="ml-1 text-on-surface-variant hover:text-on-surface"
+                    aria-label="Quitar filtro de precio"
                   >
                     ×
                   </Link>
                 </span>
               )}
-              {!ubicacion && !precio && (
+              {tipo && (
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold">
+                  Tipo: {tipo}
+                  <Link href={urlSinFiltro('tipo')} className="ml-1 text-on-surface-variant hover:text-on-surface" aria-label="Quitar filtro de tipo">
+                    ×
+                  </Link>
+                </span>
+              )}
+              {habitaciones && (
+                <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold">
+                  {habitaciones === '3' ? '3 o más recámaras' : `${habitaciones} recámara${habitaciones === '1' ? '' : 's'}`}
+                  <Link href={urlSinFiltro('habitaciones')} className="ml-1 text-on-surface-variant hover:text-on-surface" aria-label="Quitar filtro de recámaras">
+                    ×
+                  </Link>
+                </span>
+              )}
+              {!ubicacion && !precio && !tipo && !habitaciones && (
                 <span className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-full text-xs font-semibold shadow-sm">
                   <MapPin size={14} className="text-secondary" />
                   Guadalajara, Jalisco
@@ -116,9 +172,11 @@ async function PropiedadesContent({ searchParams }: Props) {
                 <strong className="text-base font-bold text-primary">
                   {propiedades.length}
                 </strong>{' '}
-                viviendas verificadas disponibles
+                viviendas disponibles
                 {ubicacion && ` en ${ubicacion}`}
                 {precio && ` hasta $${parseInt(precio).toLocaleString()}`}
+                {tipo && ` · tipo ${tipo}`}
+                {habitaciones && ` · ${habitaciones === '3' ? '3 o más' : habitaciones} recámaras`}
               </p>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -160,7 +218,7 @@ async function PropiedadesContent({ searchParams }: Props) {
         <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-on-surface-variant">
             Mostrando <span className="font-bold text-on-surface">1 - {propiedades.length}</span>{' '}
-            de {propiedades.length} residencias verificadas
+            de {propiedades.length} residencias publicadas
           </p>
           <nav className="flex items-center gap-1.5">
             <button

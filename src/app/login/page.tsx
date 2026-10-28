@@ -79,7 +79,7 @@ export default function LoginPage() {
 
             <blockquote>
               <p className="text-sm text-white/90 italic leading-relaxed">
-                "Encuentra tu próximo espacio favorito sin trámites eternos ni complicaciones."
+                &quot;Encuentra tu próximo espacio favorito sin trámites eternos ni complicaciones.&quot;
               </p>
             </blockquote>
           </div>

@@ -13,7 +13,11 @@ export interface SessionPayload {
 
 export async function createSession(payload: SessionPayload) {
   // La cookie solo se envía por HTTP y queda limitada a siete días; secure se activa en producción.
-  const token = await new SignJWT(payload as any)
+  const token = await new SignJWT({
+    usuarioId: payload.usuarioId,
+    correo: payload.correo,
+    esAdmin: payload.esAdmin,
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')

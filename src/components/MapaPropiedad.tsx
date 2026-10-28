@@ -6,7 +6,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 // Fix para el ícono del marcador que Leaflet rompe con bundlers
-delete (L.Icon.Default.prototype as any)._getIconUrl
+delete (L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: () => string })
+  ._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -25,7 +26,8 @@ export default function MapaPropiedad({ latitud, longitud, direccion, tipoInmueb
 
   useEffect(() => {
     // Leaflet necesita el DOM del navegador, por eso el mapa se monta después de hidratar.
-    setMontado(true)
+    const frame = requestAnimationFrame(() => setMontado(true))
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   if (!montado) {

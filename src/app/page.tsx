@@ -12,7 +12,7 @@ async function PropiedadesDestacadas() {
     take: 6,
     where: { estado: 'activa' },
     include: {
-      inmueble: true,
+      inmueble: { include: { propietario: true } },
       fotos: { orderBy: { orden: 'asc' }, take: 1 },
     },
   })
@@ -27,6 +27,9 @@ async function PropiedadesDestacadas() {
     estacionamiento: 1,
     metros: pub.inmueble.metros_cuadrados,
     tipo: pub.inmueble.tipo_inmueble,
+    verificada:
+      pub.inmueble.documento_verificado &&
+      pub.inmueble.propietario.estado_verificacion === 'verificado',
     imagen:
       pub.fotos[0]?.ruta_archivo ||
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
@@ -208,7 +211,7 @@ export default function Home() {
                     <Star key={i} size={16} className="fill-rating-gold" />
                   ))}
                 </div>
-                <p className="text-sm text-on-surface italic mb-4">"{t.text}"</p>
+                <p className="text-sm text-on-surface italic mb-4">&quot;{t.text}&quot;</p>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-surface-container">
                 <div className="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold">

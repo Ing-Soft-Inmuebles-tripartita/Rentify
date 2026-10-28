@@ -12,6 +12,7 @@ export interface PropertyProps {
   metros: number
   imagen: string
   tipo: string
+  verificada: boolean
 }
 
 interface Props {
@@ -29,8 +30,10 @@ export default function PropertyCard({ property }: Props) {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
           <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-            <CheckCircle2 size={14} className="text-status-success" />
-            <span className="text-[11px] font-bold text-primary">Verificado Rentify</span>
+            <CheckCircle2 size={14} className={property.verificada ? 'text-status-success' : 'text-yellow-600'} />
+            <span className="text-[11px] font-bold text-primary">
+              {property.verificada ? 'Verificado Rentify' : 'Verificación pendiente'}
+            </span>
           </div>
           <button
             aria-label="Guardar en favoritos"

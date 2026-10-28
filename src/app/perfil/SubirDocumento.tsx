@@ -66,8 +66,8 @@ export default function SubirDocumento() {
 
       setExito(true)
       form.reset()
-    } catch (err: any) {
-      setError(err.message || 'Error al subir el archivo')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al subir el archivo')
     } finally {
       setSubiendo(false)
     }

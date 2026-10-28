@@ -58,6 +58,12 @@ export default function PublicarPage() {
 
   const [paso, setPaso] = useState(1)
   const [tipoInmueble, setTipoInmueble] = useState('')
+  const [direccion, setDireccion] = useState('')
+  const [numeroHabitaciones, setNumeroHabitaciones] = useState('1')
+  const [numeroBanos, setNumeroBanos] = useState('1')
+  const [metrosCuadrados, setMetrosCuadrados] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [reglas, setReglas] = useState('')
   const [precioRenta, setPrecioRenta] = useState('')
   const [deposito, setDeposito] = useState('')
   const [amenidadesSeleccionadas, setAmenidadesSeleccionadas] = useState<string[]>([])
@@ -108,7 +114,7 @@ export default function PublicarPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-[11px] font-semibold uppercase tracking-wider mb-2">
-              <CheckCircle2 size={12} /> Verificado Rentify
+              <CheckCircle2 size={12} /> Publicación en Rentify
             </span>
             <h1 className="text-2xl md:text-3xl font-bold text-primary">
               Publicar nueva propiedad
@@ -157,6 +163,12 @@ export default function PublicarPage() {
 
       <form action={formAction}>
         <input type="hidden" name="tipo_inmueble" value={tipoInmueble} />
+        <input type="hidden" name="direccion" value={direccion} />
+        <input type="hidden" name="numero_habitaciones" value={numeroHabitaciones} />
+        <input type="hidden" name="numero_banos" value={numeroBanos} />
+        <input type="hidden" name="metros_cuadrados" value={metrosCuadrados} />
+        <input type="hidden" name="descripcion" value={descripcion} />
+        <input type="hidden" name="reglas" value={reglas} />
         <input
           type="hidden"
           name="mantenimiento_incluido"
@@ -214,7 +226,8 @@ export default function PublicarPage() {
                     <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                     <input
                       type="text"
-                      name="direccion"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
                       required
                       placeholder="Calle, número, colonia, ciudad"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary focus:border-transparent outline-none text-sm"
@@ -231,10 +244,10 @@ export default function PublicarPage() {
                       <Bed size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                       <input
                         type="number"
-                        name="numero_habitaciones"
                         required
                         min={1}
-                        defaultValue={1}
+                        value={numeroHabitaciones}
+                        onChange={(e) => setNumeroHabitaciones(e.target.value)}
                         className="w-full pl-9 pr-3 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm"
                       />
                     </div>
@@ -247,10 +260,10 @@ export default function PublicarPage() {
                       <Bath size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                       <input
                         type="number"
-                        name="numero_banos"
                         required
                         min={1}
-                        defaultValue={1}
+                        value={numeroBanos}
+                        onChange={(e) => setNumeroBanos(e.target.value)}
                         className="w-full pl-9 pr-3 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm"
                       />
                     </div>
@@ -263,11 +276,12 @@ export default function PublicarPage() {
                       <Ruler size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                       <input
                         type="number"
-                        name="metros_cuadrados"
                         required
                         min={1}
                         step="0.1"
                         placeholder="80"
+                        value={metrosCuadrados}
+                        onChange={(e) => setMetrosCuadrados(e.target.value)}
                         className="w-full pl-9 pr-3 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm"
                       />
                     </div>
@@ -281,9 +295,10 @@ export default function PublicarPage() {
                   <div className="relative">
                     <FileText size={18} className="absolute left-3 top-3 text-on-surface-variant" />
                     <textarea
-                      name="descripcion"
                       required
                       rows={4}
+                      value={descripcion}
+                      onChange={(e) => setDescripcion(e.target.value)}
                       placeholder="Describe las características, amenidades y ubicación de la propiedad..."
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm resize-none"
                     />
@@ -295,9 +310,10 @@ export default function PublicarPage() {
                     Reglas de la casa (opcional)
                   </label>
                   <textarea
-                    name="reglas"
                     rows={2}
                     placeholder="Ej. No fumar, mascotas bienvenidas, contrato mínimo 12 meses..."
+                    value={reglas}
+                    onChange={(e) => setReglas(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm resize-none"
                   />
                 </div>

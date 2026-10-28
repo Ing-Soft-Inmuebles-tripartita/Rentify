@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { createSession, destroySession } from '@/lib/auth'
-import { generarToken, calcularExpiracion, estaExpirado } from '@/lib/tokens'
+import { generarToken, calcularExpiracion, estaExpirado, hashToken } from '@/lib/tokens'
 import { enviarEmailRecuperacion } from '@/lib/email'
 
 export interface FormState {
@@ -47,7 +47,7 @@ export async function registroAction(
         contrasena: contrasenaHash,
         fecha_nacimiento: new Date(fecha_nacimiento),
         estado: 'activo',
-        verificado_email: true,
+        verificado_email: false,
         preferencias_email: {
           solicitudes: true,
           visitas: true,
@@ -146,7 +146,7 @@ export async function solicitarRecuperacionAction(
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
-        email_token: token,
+        email_token: hashToken(token),
         email_token_expira: expiracion,
       },
     })
@@ -185,7 +185,8 @@ export async function restablecerContrasenaAction(
   }
 
   const usuario = await prisma.usuario.findFirst({
-    where: { email_token: token },
+    // Acepta temporalmente tokens antiguos en claro para no invalidar enlaces aún vigentes.
+    where: { email_token: { in: [hashToken(token), token] } },
   })
 
   if (!usuario) {
