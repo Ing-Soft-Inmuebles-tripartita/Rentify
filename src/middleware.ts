@@ -6,7 +6,6 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
 const COOKIE_NAME = 'rentify_session'
 
 const RUTAS_PROTEGIDAS = ['/dashboard', '/perfil']
-const RUTAS_SOLO_INVITADOS = ['/login', '/registro']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -33,14 +32,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (RUTAS_SOLO_INVITADOS.some((ruta) => pathname.startsWith(ruta))) {
-    if (sesionValida) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-  }
-
   return NextResponse.next()
 }
 
@@ -48,7 +39,5 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/perfil/:path*',
-    '/login',
-    '/registro',
   ],
 }

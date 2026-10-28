@@ -15,14 +15,8 @@ import {
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import SolicitudRecibidaCard from './SolicitudRecibidaCard'
-import { cambiarEstadoInmuebleAction, eliminarInmuebleAction } from '@/app/actions/inmuebles'
-
-const ESTADOS = [
-  { value: 'disponible', label: 'Disponible' },
-  { value: 'en_negociacion', label: 'En negociación' },
-  { value: 'rentado', label: 'Rentado' },
-  { value: 'pausado', label: 'Pausado' },
-]
+import { eliminarInmuebleAction } from '@/app/actions/inmuebles'
+import CambiarEstadoInmuebleForm from './CambiarEstadoInmuebleForm'
 
 async function DashboardContent() {
   const usuario = await getCurrentUser()
@@ -251,30 +245,10 @@ async function DashboardContent() {
                       </p>
                     )}
 
-                    {/* Cambiar estado */}
-                    <form action={cambiarEstadoInmuebleAction} className="mt-3">
-                      <input type="hidden" name="inmueble_id" value={inm.id} />
-                      <select
-                        name="estado"
-                        defaultValue={inm.estado_inventario}
-                        onChange={(e) => e.target.form?.requestSubmit()}
-                        className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer border-0 ${
-                          inm.estado_inventario === 'disponible'
-                            ? 'bg-green-100 text-green-700'
-                            : inm.estado_inventario === 'en_negociacion'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : inm.estado_inventario === 'rentado'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {ESTADOS.map((e) => (
-                          <option key={e.value} value={e.value}>
-                            {e.label}
-                          </option>
-                        ))}
-                      </select>
-                    </form>
+                    <CambiarEstadoInmuebleForm
+                      inmuebleId={inm.id}
+                      estadoActual={inm.estado_inventario}
+                    />
 
                     {/* Acciones */}
                     <div className="flex gap-2 mt-3">
