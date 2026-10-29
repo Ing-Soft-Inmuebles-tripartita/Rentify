@@ -22,6 +22,8 @@ interface Props {
     imagen: string
     historial: {
       verificado: boolean
+      calificacion_promedio: number
+      total_evaluaciones: number
       referencias: {
         id: number
         nombre_contacto: string

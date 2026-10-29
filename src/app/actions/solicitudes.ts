@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { notificarPorCorreo } from '@/lib/email'
 
 export interface SolicitudState {
   error?: string
@@ -88,13 +89,12 @@ export async function crearSolicitudAction(
       },
     })
 
-    await prisma.notificacion.create({
-      data: {
-        usuario_id: publicacion.inmueble.propietario_id,
-        tipo: 'solicitud_renta',
-        mensaje: `${usuario.nombre} ${usuario.apellido} solicitó rentar "${publicacion.inmueble.tipo_inmueble}" en ${publicacion.inmueble.direccion}`,
-        estado: 'no_leida',
-      },
+    await notificarPorCorreo({
+      usuarioId: publicacion.inmueble.propietario_id,
+      tipo: 'solicitud_renta',
+      asunto: 'Nueva solicitud de renta',
+      mensaje: `${usuario.nombre} ${usuario.apellido} solicitó rentar "${publicacion.inmueble.tipo_inmueble}" en ${publicacion.inmueble.direccion}.`,
+      preferencia: 'solicitudes',
     })
 
     revalidatePath('/dashboard')
@@ -123,21 +123,80 @@ export async function aprobarSolicitudAction(formData: FormData) {
   // La propiedad de la publicación, no el identificador del formulario, determina quién puede decidir.
   if (solicitud.publicacion.inmueble.propietario_id !== usuario.id) return
 
-  await prisma.solicitudRenta.update({
-    where: { id: solicitudId },
-    data: { estado: 'aprobada' },
+  await prisma.$transaction(async (tx) => {
+    const resultado = await tx.solicitudRenta.updateMany({
+      where: { id: solicitudId, estado: 'pendiente' },
+      data: { estado: 'aprobada' },
+    })
+    if (resultado.count !== 1) {
+      throw new Error('La solicitud ya fue atendida.')
+    }
+
+    await tx.experienciaRenta.upsert({
+      where: { solicitud_id: solicitudId },
+      create: {
+        solicitud_id: solicitudId,
+        fecha_inicio: new Date(),
+        estado: 'activa',
+      },
+      update: {
+        estado: 'activa',
+        fecha_fin: null,
+      },
+    })
   })
 
-  await prisma.notificacion.create({
-    data: {
-      usuario_id: solicitud.inquilino_id,
-      tipo: 'solicitud_aprobada',
-      mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue aprobada`,
-      estado: 'no_leida',
-    },
+  await notificarPorCorreo({
+    usuarioId: solicitud.inquilino_id,
+    tipo: 'solicitud_aprobada',
+    asunto: 'Tu solicitud de renta fue aprobada',
+    mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue aprobada.`,
+    preferencia: 'solicitudes',
   })
 
   revalidatePath('/dashboard')
+}
+
+export async function finalizarRentaAction(formData: FormData) {
+  const experienciaId = Number(formData.get('experiencia_id'))
+  if (!Number.isInteger(experienciaId) || experienciaId <= 0) {
+    throw new Error('La renta seleccionada no es válida.')
+  }
+
+  const usuario = await getCurrentUser()
+  if (!usuario?.propietario) throw new Error('No autorizado.')
+
+  const experiencia = await prisma.experienciaRenta.findUnique({
+    where: { id: experienciaId },
+    include: {
+      solicitud: {
+        include: {
+          inquilino: { include: { usuario: true } },
+          publicacion: { include: { inmueble: true } },
+        },
+      },
+    },
+  })
+
+  if (!experiencia || experiencia.solicitud.publicacion.inmueble.propietario_id !== usuario.id) {
+    throw new Error('No tienes permiso para finalizar esta renta.')
+  }
+  if (experiencia.estado !== 'activa') throw new Error('Esta renta ya fue finalizada.')
+
+  await prisma.experienciaRenta.update({
+    where: { id: experienciaId },
+    data: { estado: 'finalizada', fecha_fin: new Date() },
+  })
+  await notificarPorCorreo({
+    usuarioId: experiencia.solicitud.inquilino_id,
+    tipo: 'renta_finalizada',
+    asunto: 'Tu renta fue finalizada',
+    mensaje: `La renta de "${experiencia.solicitud.publicacion.inmueble.tipo_inmueble}" fue finalizada. Ya puedes evaluar la vivienda y al propietario.`,
+    preferencia: 'evaluaciones',
+  })
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/evaluaciones')
 }
 
 export async function rechazarSolicitudAction(formData: FormData) {
@@ -160,13 +219,12 @@ export async function rechazarSolicitudAction(formData: FormData) {
     data: { estado: 'rechazada' },
   })
 
-  await prisma.notificacion.create({
-    data: {
-      usuario_id: solicitud.inquilino_id,
-      tipo: 'solicitud_rechazada',
-      mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue rechazada`,
-      estado: 'no_leida',
-    },
+  await notificarPorCorreo({
+    usuarioId: solicitud.inquilino_id,
+    tipo: 'solicitud_rechazada',
+    asunto: 'Actualización sobre tu solicitud de renta',
+    mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue rechazada.`,
+    preferencia: 'solicitudes',
   })
 
   revalidatePath('/dashboard')

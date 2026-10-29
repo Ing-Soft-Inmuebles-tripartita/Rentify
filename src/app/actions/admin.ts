@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { notificarPorCorreo } from '@/lib/email'
 
 // Todas las mutaciones del panel vuelven a verificar el rol en el servidor.
 async function verificarAdmin() {
@@ -63,21 +64,19 @@ export async function suspenderPublicacionAction(formData: FormData) {
       throw new Error('La publicación no existe o ya no está activa')
     }
 
-    const publicacion = await tx.publicacion.findUniqueOrThrow({
-      where: { id: publicacionId },
-      include: { inmueble: true },
-    })
-
-    await tx.notificacion.create({
-      data: {
-        usuario_id: publicacion.inmueble.propietario_id,
-        tipo: 'publicacion_suspendida',
-        mensaje: `Tu publicación "${publicacion.inmueble.tipo_inmueble}" fue suspendida. Motivo: ${motivo}`,
-        estado: 'no_leida',
-      },
-    })
   })
 
+  const publicacion = await prisma.publicacion.findUniqueOrThrow({
+    where: { id: publicacionId },
+    include: { inmueble: true },
+  })
+  await notificarPorCorreo({
+    usuarioId: publicacion.inmueble.propietario_id,
+    tipo: 'publicacion_suspendida',
+    asunto: 'Tu publicación fue suspendida',
+    mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" fue suspendida. Motivo: ${motivo}`,
+    preferencia: 'cuenta',
+  })
   revalidarModeracion()
 }
 
@@ -97,6 +96,17 @@ export async function reactivarPublicacionAction(formData: FormData) {
     throw new Error('La publicación no existe o no está suspendida')
   }
 
+  const publicacion = await prisma.publicacion.findUniqueOrThrow({
+    where: { id: publicacionId },
+    include: { inmueble: true },
+  })
+  await notificarPorCorreo({
+    usuarioId: publicacion.inmueble.propietario_id,
+    tipo: 'publicacion_reactivada',
+    asunto: 'Tu publicación fue reactivada',
+    mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" ya está activa nuevamente.`,
+    preferencia: 'cuenta',
+  })
   revalidarModeracion()
 }
 
@@ -117,6 +127,11 @@ export async function eliminarPublicacionAction(formData: FormData) {
 export async function aprobarDocumentoAction(formData: FormData) {
   const admin = await verificarAdmin()
   const documentoId = obtenerId(formData, 'documento_id')
+  const documentoAnterior = await prisma.documento.findUnique({
+    where: { id: documentoId },
+    select: { usuario_id: true, inmueble_id: true, tipo_documento: true },
+  })
+  if (!documentoAnterior) throw new Error('El documento no existe')
 
   await prisma.$transaction(async (tx) => {
     const resultado = await tx.documento.updateMany({
@@ -180,19 +195,24 @@ export async function aprobarDocumentoAction(formData: FormData) {
       })
     }
 
-    if (documento.usuario_id) {
-      await tx.notificacion.create({
-        data: {
-          usuario_id: documento.usuario_id,
-          tipo: 'documento_aprobado',
-          mensaje: esIdentificacion
-            ? `Tu documento "${documento.tipo_documento}" fue aprobado y tu identidad quedó verificada.`
-            : `Tu documento "${documento.tipo_documento}" fue aprobado.`,
-          estado: 'no_leida',
-        },
-      })
-    }
   })
+
+  const propietarioId = documentoAnterior.inmueble_id
+    ? (await prisma.inmueble.findUnique({
+        where: { id: documentoAnterior.inmueble_id },
+        select: { propietario_id: true },
+      }))?.propietario_id
+    : null
+  const destinatarioId = documentoAnterior.usuario_id ?? propietarioId
+  if (destinatarioId) {
+    await notificarPorCorreo({
+      usuarioId: destinatarioId,
+      tipo: 'documento_aprobado',
+      asunto: 'Documento verificado',
+      mensaje: `Tu documento "${documentoAnterior.tipo_documento}" fue aprobado.`,
+      preferencia: 'cuenta',
+    })
+  }
 
   revalidatePath('/dashboard/admin')
   revalidatePath('/dashboard')
@@ -204,6 +224,11 @@ export async function rechazarDocumentoAction(formData: FormData) {
   const documentoId = obtenerId(formData, 'documento_id')
   const motivo = obtenerTexto(formData, 'motivo')
   if (!motivo) throw new Error('Indica el motivo del rechazo')
+  const documentoAnterior = await prisma.documento.findUnique({
+    where: { id: documentoId },
+    select: { usuario_id: true, inmueble_id: true, tipo_documento: true },
+  })
+  if (!documentoAnterior) throw new Error('El documento no existe')
 
   await prisma.$transaction(async (tx) => {
     const resultado = await tx.documento.updateMany({
@@ -219,10 +244,6 @@ export async function rechazarDocumentoAction(formData: FormData) {
       throw new Error('El documento no existe o ya fue revisado')
     }
 
-    const documento = await tx.documento.findUniqueOrThrow({
-      where: { id: documentoId },
-    })
-
     await tx.verificacion.create({
       data: {
         documento_id: documentoId,
@@ -232,17 +253,24 @@ export async function rechazarDocumentoAction(formData: FormData) {
       },
     })
 
-    if (documento.usuario_id) {
-      await tx.notificacion.create({
-        data: {
-          usuario_id: documento.usuario_id,
-          tipo: 'documento_rechazado',
-          mensaje: `Tu documento "${documento.tipo_documento}" fue rechazado. Motivo: ${motivo}`,
-          estado: 'no_leida',
-        },
-      })
-    }
   })
+
+  const propietarioId = documentoAnterior.inmueble_id
+    ? (await prisma.inmueble.findUnique({
+        where: { id: documentoAnterior.inmueble_id },
+        select: { propietario_id: true },
+      }))?.propietario_id
+    : null
+  const destinatarioId = documentoAnterior.usuario_id ?? propietarioId
+  if (destinatarioId) {
+    await notificarPorCorreo({
+      usuarioId: destinatarioId,
+      tipo: 'documento_rechazado',
+      asunto: 'Documento rechazado',
+      mensaje: `Tu documento "${documentoAnterior.tipo_documento}" fue rechazado. Motivo: ${motivo}`,
+      preferencia: 'cuenta',
+    })
+  }
 
   revalidatePath('/dashboard/admin')
   revalidatePath('/dashboard')
@@ -297,14 +325,6 @@ export async function resolverReporteAction(formData: FormData) {
           fecha_suspension: new Date(),
         },
       })
-      await tx.notificacion.create({
-        data: {
-          usuario_id: propietario.id,
-          tipo: 'publicacion_suspendida',
-          mensaje: `Tu publicación fue suspendida por un reporte. Motivo: ${reporte.motivo}`,
-          estado: 'no_leida',
-        },
-      })
     } else if (accion === 'bloquear_usuario') {
       if (propietario.administrador || propietario.id === admin.id) {
         throw new Error('No se puede bloquear una cuenta de administrador')
@@ -315,14 +335,6 @@ export async function resolverReporteAction(formData: FormData) {
           bloqueado: true,
           motivo_bloqueo: `Bloqueado por reporte: ${reporte.motivo}`,
           fecha_bloqueo: new Date(),
-        },
-      })
-      await tx.notificacion.create({
-        data: {
-          usuario_id: propietario.id,
-          tipo: 'usuario_bloqueado',
-          mensaje: `Tu cuenta fue bloqueada por un reporte. Motivo: ${reporte.motivo}`,
-          estado: 'no_leida',
         },
       })
     }
@@ -336,6 +348,31 @@ export async function resolverReporteAction(formData: FormData) {
       },
     })
   })
+
+  if (accion !== 'solo_resolver') {
+    const reporte = await prisma.reporte.findUniqueOrThrow({
+      where: { id: reporteId },
+      include: {
+        publicacion: {
+          include: {
+            inmueble: {
+              include: { propietario: { select: { usuario_id: true } } },
+            },
+          },
+        },
+      },
+    })
+    const propietarioId = reporte.publicacion.inmueble.propietario.usuario_id
+    await notificarPorCorreo({
+      usuarioId: propietarioId,
+      tipo: accion === 'bloquear_usuario' ? 'usuario_bloqueado' : 'publicacion_suspendida',
+      asunto: accion === 'bloquear_usuario' ? 'Tu cuenta fue bloqueada' : 'Tu publicación fue suspendida',
+      mensaje: accion === 'bloquear_usuario'
+        ? `Tu cuenta fue bloqueada por un reporte. Motivo: ${reporte.motivo}`
+        : `Tu publicación fue suspendida por un reporte. Motivo: ${reporte.motivo}`,
+      preferencia: 'cuenta',
+    })
+  }
 
   revalidarModeracion()
 }
@@ -388,6 +425,13 @@ export async function bloquearUsuarioAction(formData: FormData) {
     throw new Error('El usuario no existe o no se puede bloquear')
   }
 
+  await notificarPorCorreo({
+    usuarioId,
+    tipo: 'usuario_bloqueado',
+    asunto: 'Tu cuenta fue bloqueada',
+    mensaje: `Tu cuenta fue bloqueada por el equipo de Rentify. Motivo: ${motivo}`,
+    preferencia: 'cuenta',
+  })
   revalidatePath('/dashboard/admin')
 }
 
@@ -406,5 +450,12 @@ export async function desbloquearUsuarioAction(formData: FormData) {
     throw new Error('El usuario no existe o no está bloqueado')
   }
 
+  await notificarPorCorreo({
+    usuarioId,
+    tipo: 'usuario_desbloqueado',
+    asunto: 'Tu cuenta fue desbloqueada',
+    mensaje: 'Tu cuenta vuelve a estar activa en Rentify.',
+    preferencia: 'cuenta',
+  })
   revalidatePath('/dashboard/admin')
 }

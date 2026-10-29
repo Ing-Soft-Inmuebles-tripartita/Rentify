@@ -14,6 +14,10 @@ export interface PropertyProps {
   imagen: string
   tipo: string
   verificada: boolean
+  calificacion_promedio: number
+  total_evaluaciones: number
+  permite_mascotas?: boolean
+  permite_ninos?: boolean
 }
 
 interface Props {
@@ -58,7 +62,11 @@ export default function PropertyCard({ property }: Props) {
           </div>
           <div className="flex items-center gap-0.5 text-on-surface font-semibold text-sm">
             <Star size={14} className="text-rating-gold fill-rating-gold" />
-            <span>4.9</span>
+            <span>
+              {property.total_evaluaciones > 0
+                ? property.calificacion_promedio.toFixed(1)
+                : 'Nuevo'}
+            </span>
           </div>
         </div>
 
@@ -81,6 +89,9 @@ export default function PropertyCard({ property }: Props) {
             <span className="text-[11px] text-on-surface-variant">m² const.</span>
           </div>
         </div>
+        <p className="mb-3 text-xs text-on-surface-variant">
+          Mascotas: {property.permite_mascotas ? 'sí' : 'no'} · Niños: {property.permite_ninos ? 'sí' : 'no'}
+        </p>
       </div>
 
       <div className="flex items-center justify-between pt-2">

@@ -19,10 +19,18 @@ import {
   Trash2,
 } from 'lucide-react'
 import { editarInmuebleAction, EditarInmuebleState } from '@/app/actions/inmuebles'
+import SubirDocumento from '@/app/perfil/SubirDocumento'
 
 const initialState: EditarInmuebleState = {}
 
 interface Props {
+  documentos: {
+    id: number
+    tipo_documento: string
+    estado: string
+    motivo_rechazo: string | null
+    fecha_carga: Date
+  }[]
   inmueble: {
     id: number
     tipo_inmueble: string
@@ -30,6 +38,8 @@ interface Props {
     numero_habitaciones: number
     numero_banos: number
     metros_cuadrados: number
+    latitud: number | null
+    longitud: number | null
     servicios_incluidos: string | null
     plazo_minimo_meses: number
     mantenimiento_incluido: boolean
@@ -39,12 +49,14 @@ interface Props {
       deposito: number
       descripcion: string
       reglas: string | null
+      permite_mascotas: boolean
+      permite_ninos: boolean
       fotos: string[]
     } | null
   }
 }
 
-export default function EditarPropiedadForm({ inmueble }: Props) {
+export default function EditarPropiedadForm({ inmueble, documentos }: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(
     editarInmuebleAction,
@@ -103,6 +115,29 @@ export default function EditarPropiedadForm({ inmueble }: Props) {
         </p>
       </div>
 
+      <section className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-primary">Verificación legal del inmueble</h2>
+          <p className="text-sm text-on-surface-variant mt-1">
+            Adjunta una escritura, título de propiedad o recibo predial. El equipo de Rentify revisará el documento.
+          </p>
+        </div>
+        <SubirDocumento inmuebleId={inmueble.id} />
+        {documentos.length > 0 && (
+          <ul className="space-y-2">
+            {documentos.map((documento) => (
+              <li key={documento.id} className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                <span className="font-medium">{documento.tipo_documento}</span>
+                <span className="text-gray-500"> · {documento.estado}</span>
+                {documento.motivo_rechazo && (
+                  <p className="mt-1 text-xs text-red-700">{documento.motivo_rechazo}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <form action={formAction} className="space-y-6">
         <input type="hidden" name="inmueble_id" value={inmueble.id} />
         <input
@@ -159,6 +194,30 @@ export default function EditarPropiedadForm({ inmueble }: Props) {
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm"
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-semibold text-primary">
+                Latitud (opcional)
+                <input
+                  type="number"
+                  step="any"
+                  name="latitud"
+                  defaultValue={inmueble.latitud ?? ''}
+                  placeholder="20.6597"
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-surface-canvas px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm font-semibold text-primary">
+                Longitud (opcional)
+                <input
+                  type="number"
+                  step="any"
+                  name="longitud"
+                  defaultValue={inmueble.longitud ?? ''}
+                  placeholder="-103.3496"
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-surface-canvas px-3 py-2 text-sm"
+                />
+              </label>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -356,6 +415,26 @@ export default function EditarPropiedadForm({ inmueble }: Props) {
                 defaultValue={inmueble.publicacion?.reglas || ''}
                 className="w-full px-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm resize-none"
               />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex items-start gap-3 rounded-xl bg-surface-canvas p-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="permite_mascotas"
+                  defaultChecked={inmueble.publicacion?.permite_mascotas ?? false}
+                  className="mt-1 accent-secondary"
+                />
+                <span>Se permiten mascotas</span>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-surface-canvas p-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="permite_ninos"
+                  defaultChecked={inmueble.publicacion?.permite_ninos ?? true}
+                  className="mt-1 accent-secondary"
+                />
+                <span>Se permiten niños</span>
+              </label>
             </div>
 
             <div>

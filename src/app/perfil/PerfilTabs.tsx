@@ -120,8 +120,8 @@ function TabSeguridad() {
   return (
     <form action={formAction} className="space-y-4">
       <Field label="Contraseña actual" name="actual" type="password" required />
-      <Field label="Contraseña nueva" name="nueva" type="password" required minLength={6} />
-      <Field label="Confirmar contraseña nueva" name="confirmar" type="password" required minLength={6} />
+      <Field label="Contraseña nueva" name="nueva" type="password" required minLength={8} />
+      <Field label="Confirmar contraseña nueva" name="confirmar" type="password" required minLength={8} />
 
       {state?.error && <Alert type="error">{state.error}</Alert>}
       {state?.success && <Alert type="success">{state.mensaje}</Alert>}
@@ -154,6 +154,7 @@ function TabPreferencias({ usuario }: Pick<Props, 'usuario'>) {
       <Checkbox name="solicitudes" defaultChecked={prefs.solicitudes !== false} label="Solicitudes de renta" description="Cuando alguien solicite una de tus propiedades o cuando actualicen tu solicitud" />
       <Checkbox name="visitas" defaultChecked={prefs.visitas !== false} label="Visitas agendadas" description="Recordatorios de visitas presenciales o virtuales" />
       <Checkbox name="evaluaciones" defaultChecked={prefs.evaluaciones !== false} label="Evaluaciones" description="Cuando recibas una calificación" />
+      <Checkbox name="cuenta" defaultChecked={prefs.cuenta !== false} label="Cuenta y verificaciones" description="Avisos de seguridad, documentos y moderación" />
       <Checkbox name="marketing" defaultChecked={prefs.marketing === true} label="Novedades y marketing" description="Consejos, propiedades destacadas y promociones" />
 
       {state?.error && <Alert type="error">{state.error}</Alert>}

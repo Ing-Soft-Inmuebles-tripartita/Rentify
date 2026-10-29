@@ -1,240 +1,262 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { MapPin, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import type { Prisma } from '@prisma/client'
 import Navbar from '@/components/Navbar'
 import PropertyCard from '@/components/PropertyCard'
+import MapaCatalogo from '@/components/MapaCatalogo'
 import { prisma } from '@/lib/prisma'
 
 interface Props {
   searchParams: Promise<{
     ubicacion?: string
     precio?: string
+    minPrecio?: string
+    maxPrecio?: string
     tipo?: string
     habitaciones?: string
+    banos?: string
+    amenidad?: string
+    mascotas?: string
+    ninos?: string
+    orden?: string
+    vista?: string
   }>
 }
 
-async function getPropiedades(
-  ubicacion?: string,
-  precio?: string,
-  tipo?: string,
-  habitaciones?: string
-) {
-  // Los filtros vienen de la URL para que la búsqueda se pueda compartir o recargar.
-  const where: Prisma.PublicacionWhereInput = {
-    estado: 'activa',
-  }
+const AMENIDADES = [
+  'Internet de Alta Velocidad',
+  'Cocina Integral Equipada',
+  'Pet-Friendly',
+  'Seguridad 24/7',
+  'Gimnasio',
+  'Alberca',
+  'Amueblado',
+]
+
+function numeroPositivo(valor?: string): number | undefined {
+  if (!valor || valor.length > 12) return undefined
+  const numero = Number(valor)
+  return Number.isFinite(numero) && numero > 0 ? numero : undefined
+}
+
+async function getPropiedades(filtros: Awaited<Props['searchParams']>) {
+  const where: Prisma.PublicacionWhereInput = { estado: 'activa' }
   const inmuebleWhere: Prisma.InmuebleWhereInput = {
     estado_inventario: 'disponible',
   }
+  const ubicacion = filtros.ubicacion?.trim().slice(0, 100)
+  const tipo = filtros.tipo?.trim().slice(0, 60)
+  const amenidad = AMENIDADES.find((nombre) => nombre === filtros.amenidad)
+  const precioMinimo = numeroPositivo(filtros.minPrecio)
+  const precioMaximo = numeroPositivo(filtros.maxPrecio || filtros.precio)
+  const habitaciones = numeroPositivo(filtros.habitaciones)
+  const banos = numeroPositivo(filtros.banos)
 
   if (ubicacion) {
-    inmuebleWhere.direccion = {
-      contains: ubicacion,
-      mode: 'insensitive',
-    }
+    inmuebleWhere.direccion = { contains: ubicacion, mode: 'insensitive' }
   }
-
-  if (precio) {
-    const precioMaximo = Number(precio)
-    if (Number.isFinite(precioMaximo) && precioMaximo > 0) {
-      where.precio_renta = { lte: precioMaximo }
-    }
-  }
-
   if (tipo) {
     inmuebleWhere.tipo_inmueble = { contains: tipo, mode: 'insensitive' }
   }
-
   if (habitaciones) {
-    const cantidad = Number(habitaciones)
-    if (Number.isInteger(cantidad) && cantidad > 0) {
-      inmuebleWhere.numero_habitaciones = cantidad === 3 ? { gte: 3 } : cantidad
+    inmuebleWhere.numero_habitaciones = habitaciones >= 3 ? { gte: 3 } : Math.floor(habitaciones)
+  }
+  if (banos) {
+    inmuebleWhere.numero_banos = banos >= 3 ? { gte: 3 } : Math.floor(banos)
+  }
+  if (amenidad) {
+    inmuebleWhere.caracteristicas = {
+      some: { caracteristica: { nombre: { contains: amenidad, mode: 'insensitive' } } },
     }
   }
-
+  if (filtros.mascotas === 'on') where.permite_mascotas = true
+  if (filtros.ninos === 'on') where.permite_ninos = true
+  if (precioMinimo || precioMaximo) {
+    where.precio_renta = {
+      ...(precioMinimo ? { gte: precioMinimo } : {}),
+      ...(precioMaximo ? { lte: precioMaximo } : {}),
+    }
+  }
   where.inmueble = { is: inmuebleWhere }
+
+  const orden = filtros.orden === 'precio_asc'
+    ? { precio_renta: 'asc' as const }
+    : filtros.orden === 'precio_desc'
+      ? { precio_renta: 'desc' as const }
+      : { fecha_publicacion: 'desc' as const }
 
   const publicaciones = await prisma.publicacion.findMany({
     where,
     include: {
-      inmueble: { include: { propietario: true } },
-      fotos: {
-        orderBy: { orden: 'asc' },
-        take: 1,
+      inmueble: {
+        include: {
+          propietario: true,
+          caracteristicas: { include: { caracteristica: true } },
+        },
       },
+      fotos: { orderBy: { orden: 'asc' }, take: 1 },
     },
-    orderBy: {
-      fecha_publicacion: 'desc',
-    },
+    orderBy: orden,
+    take: 100,
   })
 
-  return publicaciones.map((pub) => ({
-    id: pub.id,
-    titulo: pub.inmueble.tipo_inmueble,
-    ubicacion: pub.inmueble.direccion,
-    precio: pub.precio_renta,
-    habitaciones: pub.inmueble.numero_habitaciones,
-    banos: pub.inmueble.numero_banos,
+  return publicaciones.map((publicacion) => ({
+    id: publicacion.id,
+    titulo: publicacion.inmueble.tipo_inmueble,
+    ubicacion: publicacion.inmueble.direccion,
+    precio: publicacion.precio_renta,
+    habitaciones: publicacion.inmueble.numero_habitaciones,
+    banos: publicacion.inmueble.numero_banos,
     estacionamiento: 1,
-    metros: pub.inmueble.metros_cuadrados,
-    tipo: pub.inmueble.tipo_inmueble,
+    metros: publicacion.inmueble.metros_cuadrados,
+    tipo: publicacion.inmueble.tipo_inmueble,
     verificada:
-      pub.inmueble.documento_verificado &&
-      pub.inmueble.propietario.estado_verificacion === 'verificado',
+      publicacion.inmueble.documento_verificado &&
+      publicacion.inmueble.propietario.estado_verificacion === 'verificado',
     imagen:
-      pub.fotos[0]?.ruta_archivo ||
+      publicacion.fotos[0]?.ruta_archivo ||
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    latitud: publicacion.inmueble.latitud,
+    longitud: publicacion.inmueble.longitud,
+    permite_mascotas: publicacion.permite_mascotas,
+    permite_ninos: publicacion.permite_ninos,
+    calificacion_promedio: publicacion.inmueble.calificacion_promedio,
+    total_evaluaciones: publicacion.inmueble.total_evaluaciones,
+    caracteristicas: publicacion.inmueble.caracteristicas.map(
+      ({ caracteristica }) => caracteristica.nombre
+    ),
   }))
 }
 
 async function PropiedadesContent({ searchParams }: Props) {
-  const { ubicacion, precio, tipo, habitaciones } = await searchParams
-  const propiedades = await getPropiedades(ubicacion, precio, tipo, habitaciones)
-  const filtros = { ubicacion, precio, tipo, habitaciones }
-  const urlSinFiltro = (omitido: keyof typeof filtros) => {
-    const params = new URLSearchParams()
-    Object.entries(filtros).forEach(([key, value]) => {
-      if (key !== omitido && value) params.set(key, value)
+  const filtros = await searchParams
+  const propiedades = await getPropiedades(filtros)
+  const vista = ['lista', 'mapa'].includes(filtros.vista || '') ? filtros.vista! : 'cuadricula'
+  const urlVista = (seleccion: string) => {
+    const parametros = new URLSearchParams()
+    Object.entries({ ...filtros, vista: seleccion }).forEach(([clave, valor]) => {
+      if (valor) parametros.set(clave, valor)
     })
-    const query = params.toString()
-    return query ? `/propiedades?${query}` : '/propiedades'
+    return `/propiedades?${parametros.toString()}`
   }
 
   return (
-    <div className="flex flex-col w-full">
-      {/* Barra de filtros sticky */}
-      <section className="sticky top-20 z-40 bg-white/90 backdrop-blur-xl shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center flex-wrap gap-2">
-              {ubicacion && (
-                <span className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-full text-xs font-semibold shadow-sm">
-                  <MapPin size={14} className="text-secondary" />
-                  {ubicacion}
-                  <Link
-                    href={urlSinFiltro('ubicacion')}
-                    className="ml-1 text-white/70 hover:text-white"
-                    aria-label="Quitar filtro de ubicación"
-                  >
-                    ×
-                  </Link>
-                </span>
-              )}
-              {precio && (
-                <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold hover:bg-surface-container-high transition">
-                  💰 Hasta ${parseInt(precio).toLocaleString()} MXN
-                  <Link
-                    href={urlSinFiltro('precio')}
-                    className="ml-1 text-on-surface-variant hover:text-on-surface"
-                    aria-label="Quitar filtro de precio"
-                  >
-                    ×
-                  </Link>
-                </span>
-              )}
-              {tipo && (
-                <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold">
-                  Tipo: {tipo}
-                  <Link href={urlSinFiltro('tipo')} className="ml-1 text-on-surface-variant hover:text-on-surface" aria-label="Quitar filtro de tipo">
-                    ×
-                  </Link>
-                </span>
-              )}
-              {habitaciones && (
-                <span className="flex items-center gap-1 px-3 py-1.5 bg-surface-container text-on-surface rounded-full text-xs font-semibold">
-                  {habitaciones === '3' ? '3 o más recámaras' : `${habitaciones} recámara${habitaciones === '1' ? '' : 's'}`}
-                  <Link href={urlSinFiltro('habitaciones')} className="ml-1 text-on-surface-variant hover:text-on-surface" aria-label="Quitar filtro de recámaras">
-                    ×
-                  </Link>
-                </span>
-              )}
-              {!ubicacion && !precio && !tipo && !habitaciones && (
-                <span className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-full text-xs font-semibold shadow-sm">
-                  <MapPin size={14} className="text-secondary" />
-                  Guadalajara, Jalisco
-                </span>
-              )}
-              <Link
-                href="/propiedades"
-                className="flex items-center gap-1 px-3 py-1.5 bg-surface-container-low text-on-surface rounded-full text-xs font-semibold hover:bg-surface-container transition"
-              >
-                Todas las propiedades
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-status-success animate-pulse" />
-              <p className="text-sm text-on-surface">
-                <strong className="text-base font-bold text-primary">
-                  {propiedades.length}
-                </strong>{' '}
-                viviendas disponibles
-                {ubicacion && ` en ${ubicacion}`}
-                {precio && ` hasta $${parseInt(precio).toLocaleString()}`}
-                {tipo && ` · tipo ${tipo}`}
-                {habitaciones && ` · ${habitaciones === '3' ? '3 o más' : habitaciones} recámaras`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <label className="text-xs font-semibold text-on-surface-variant">
-                Ordenar por:
-              </label>
-              <select className="appearance-none bg-white text-on-surface text-xs font-semibold pl-2 pr-7 py-1.5 rounded-lg shadow-sm focus:outline-none cursor-pointer">
-                <option>Más recomendados</option>
-                <option>Menor a mayor precio</option>
-                <option>Mayor a menor precio</option>
-                <option>Recientes</option>
-              </select>
-            </div>
-          </div>
-        </div>
+    <div className="flex w-full flex-col">
+      <section className="sticky top-20 z-40 bg-white/95 shadow-sm backdrop-blur-xl">
+        <form action="/propiedades" className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-4 md:grid-cols-4 lg:grid-cols-7">
+          <input
+            name="ubicacion"
+            defaultValue={filtros.ubicacion}
+            placeholder="Ubicación"
+            aria-label="Ubicación"
+            className="rounded-lg border px-3 py-2 text-sm"
+          />
+          <input
+            name="minPrecio"
+            type="number"
+            min="1"
+            defaultValue={filtros.minPrecio}
+            placeholder="Precio mínimo"
+            aria-label="Precio mínimo"
+            className="rounded-lg border px-3 py-2 text-sm"
+          />
+          <input
+            name="maxPrecio"
+            type="number"
+            min="1"
+            defaultValue={filtros.maxPrecio || filtros.precio}
+            placeholder="Precio máximo"
+            aria-label="Precio máximo"
+            className="rounded-lg border px-3 py-2 text-sm"
+          />
+          <input
+            name="tipo"
+            defaultValue={filtros.tipo}
+            placeholder="Tipo de vivienda"
+            aria-label="Tipo de vivienda"
+            className="rounded-lg border px-3 py-2 text-sm"
+          />
+          <select name="habitaciones" defaultValue={filtros.habitaciones || ''} aria-label="Recámaras" className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Recámaras</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+          <select name="banos" defaultValue={filtros.banos || ''} aria-label="Baños" className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Baños</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+          <select name="amenidad" defaultValue={filtros.amenidad || ''} aria-label="Amenidad" className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">Amenidad</option>
+            {AMENIDADES.map((amenidad) => <option key={amenidad}>{amenidad}</option>)}
+          </select>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" name="mascotas" defaultChecked={filtros.mascotas === 'on'} value="on" />
+            Acepta mascotas
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" name="ninos" defaultChecked={filtros.ninos === 'on'} value="on" />
+            Acepta niños
+          </label>
+          <select name="orden" defaultValue={filtros.orden || 'recientes'} aria-label="Ordenar" className="rounded-lg border px-3 py-2 text-sm">
+            <option value="recientes">Más recientes</option>
+            <option value="precio_asc">Menor precio</option>
+            <option value="precio_desc">Mayor precio</option>
+          </select>
+          <input type="hidden" name="vista" value={vista} />
+          <button type="submit" className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+            <Search size={16} /> Buscar
+          </button>
+          <Link href="/propiedades" className="flex items-center justify-center rounded-lg border px-3 py-2 text-sm">
+            Limpiar filtros
+          </Link>
+        </form>
       </section>
 
-      {/* Grid de propiedades */}
-      <section className="max-w-7xl mx-auto w-full px-6 pt-8 pb-6">
-        {propiedades.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
-            <Search size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500 mb-2">
-              No se encontraron propiedades con esos filtros.
-            </p>
-            <Link href="/propiedades" className="text-primary font-semibold underline">
-              Ver todas las propiedades
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {propiedades.map((prop) => (
-              <PropertyCard key={prop.id} property={prop} />
-            ))}
-          </div>
-        )}
-
-        {/* Paginación */}
-        <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-on-surface-variant">
-            Mostrando <span className="font-bold text-on-surface">1 - {propiedades.length}</span>{' '}
-            de {propiedades.length} residencias publicadas
+      <section className="mx-auto w-full max-w-7xl px-6 py-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-on-surface-variant">
+            <strong className="text-primary">{propiedades.length}</strong> viviendas disponibles
           </p>
-          <nav className="flex items-center gap-1.5">
-            <button
-              disabled
-              className="w-10 h-10 rounded-xl bg-white text-on-surface-variant flex items-center justify-center shadow-sm"
-            >
-              ←
-            </button>
-            <button className="w-10 h-10 rounded-xl bg-primary text-white font-semibold text-sm shadow-sm">
-              1
-            </button>
-            <button className="px-4 h-10 rounded-xl bg-white hover:bg-surface-container text-primary text-xs font-semibold shadow-sm transition">
-              Siguiente →
-            </button>
+          <nav aria-label="Vista de propiedades" className="flex gap-2 text-sm">
+            {[
+              ['cuadricula', 'Cuadrícula'],
+              ['lista', 'Lista'],
+              ['mapa', 'Mapa'],
+            ].map(([valor, etiqueta]) => (
+              <Link
+                key={valor}
+                href={urlVista(valor)}
+                aria-current={vista === valor ? 'page' : undefined}
+                className={`rounded-lg px-3 py-2 ${vista === valor ? 'bg-primary text-white' : 'bg-white text-primary'}`}
+              >
+                {etiqueta}
+              </Link>
+            ))}
           </nav>
         </div>
+
+        {propiedades.length === 0 ? (
+          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+            <Search size={48} className="mx-auto mb-4 text-gray-300" />
+            <p className="mb-2 text-gray-500">No se encontraron propiedades con esos filtros.</p>
+            <Link href="/propiedades" className="font-semibold text-primary underline">Ver todas las propiedades</Link>
+          </div>
+        ) : vista === 'mapa' ? (
+          <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
+            <MapaCatalogo propiedades={propiedades} />
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto">
+              {propiedades.map((propiedad) => <PropertyCard key={propiedad.id} property={propiedad} />)}
+            </div>
+          </div>
+        ) : (
+          <div className={vista === 'lista' ? 'grid grid-cols-1 gap-5' : 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'}>
+            {propiedades.map((propiedad) => <PropertyCard key={propiedad.id} property={propiedad} />)}
+          </div>
+        )}
       </section>
     </div>
   )
@@ -244,19 +266,8 @@ export default async function PropiedadesPage({ searchParams }: Props) {
   return (
     <main className="min-h-screen bg-surface">
       <Navbar />
-
       <div className="pt-20">
-        <Suspense
-          fallback={
-            <div className="max-w-7xl mx-auto px-6 py-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="bg-white rounded-2xl h-96 animate-pulse" />
-                ))}
-              </div>
-            </div>
-          }
-        >
+        <Suspense fallback={<div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-10 md:grid-cols-3">{[1, 2, 3].map((i) => <div key={i} className="h-96 animate-pulse rounded-2xl bg-white" />)}</div>}>
           <PropiedadesContent searchParams={searchParams} />
         </Suspense>
       </div>

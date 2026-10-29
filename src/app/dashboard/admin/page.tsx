@@ -8,6 +8,7 @@ import AdminTabs from './AdminTabs'
 import type { PublicacionAdmin } from './TabModeracion'
 import type { DocumentoAdmin } from './TabVerificaciones'
 import type { ReporteAdmin } from './TabReportes'
+import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 
 async function AdminContent() {
   const usuario = await getCurrentUser()
@@ -72,6 +73,23 @@ async function AdminContent() {
     }),
   ])
 
+  const supabaseAdmin = createSupabaseAdminClient()
+  const documentosFirmados = await Promise.all(
+    documentos.map(async (documento) => {
+      if (documento.ruta_archivo.startsWith('http')) return documento
+
+      const { data, error } = await supabaseAdmin.storage
+        .from('rentify')
+        .createSignedUrl(documento.ruta_archivo, 5 * 60)
+      if (error || !data?.signedUrl) {
+        console.error(`No se pudo generar acceso temporal al documento ${documento.id}:`, error)
+        throw new Error('No se pudieron cargar los documentos privados para revisión.')
+      }
+
+      return { ...documento, ruta_archivo: data.signedUrl }
+    })
+  )
+
   return (
     <div className="space-y-6">
       <div>
@@ -116,7 +134,7 @@ async function AdminContent() {
 
       <AdminTabs
         publicaciones={publicaciones as PublicacionAdmin[]}
-        documentos={documentos as DocumentoAdmin[]}
+        documentos={documentosFirmados as DocumentoAdmin[]}
         reportes={reportes as ReporteAdmin[]}
       />
     </div>

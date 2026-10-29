@@ -37,9 +37,6 @@ export default function RecuperarPage() {
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded-lg text-sm text-center">
             <p className="font-medium mb-1">Revisa tu correo</p>
             <p>{state.mensaje}</p>
-            <p className="text-xs mt-3 text-green-600">
-              (En desarrollo, el enlace aparece en la consola del servidor)
-            </p>
           </div>
         ) : (
           <form action={formAction} className="space-y-4">

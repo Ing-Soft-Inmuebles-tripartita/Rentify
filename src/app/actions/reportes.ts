@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { notificarPorCorreo } from '@/lib/email'
 
 export interface ReporteState {
   error?: string
@@ -67,18 +68,26 @@ export async function crearReporteAction(
     })
 
     // Notificar a todos los admins
-    const admins = await prisma.administrador.findMany()
+    const admins = await prisma.administrador.findMany({
+      select: { usuario_id: true },
+    })
 
     for (const admin of admins) {
-      await prisma.notificacion.create({
-        data: {
-          usuario_id: admin.usuario_id,
-          tipo: 'reporte_nuevo',
-          mensaje: `Nuevo reporte en "${publicacion.inmueble.tipo_inmueble}": ${motivo}`,
-          estado: 'no_leida',
-        },
+      await notificarPorCorreo({
+        usuarioId: admin.usuario_id,
+        tipo: 'reporte_nuevo',
+        asunto: 'Nuevo reporte de publicación',
+        mensaje: `Se recibió un reporte en "${publicacion.inmueble.tipo_inmueble}": ${motivo}.`,
+        preferencia: 'cuenta',
       })
     }
+    await notificarPorCorreo({
+      usuarioId: usuario.id,
+      tipo: 'reporte_recibido',
+      asunto: 'Recibimos tu reporte',
+      mensaje: 'El equipo de Rentify revisará la publicación que reportaste.',
+      preferencia: 'cuenta',
+    })
 
     revalidatePath(`/propiedad/${publicacion_id}`)
     revalidatePath('/dashboard/admin')

@@ -13,6 +13,8 @@ import {
 interface Props {
   historial: {
     verificado: boolean
+    calificacion_promedio: number
+    total_evaluaciones: number
     referencias: {
       id: number
       nombre_contacto: string
@@ -31,7 +33,7 @@ interface Props {
 
 export default function HistorialSolicitante({ historial }: Props) {
   const [abierto, setAbierto] = useState(false)
-  const { verificado, referencias, experiencias } = historial
+  const { verificado, calificacion_promedio, total_evaluaciones, referencias, experiencias } = historial
 
   return (
     <div className="mt-3 rounded-lg border border-secondary/20 bg-surface overflow-hidden">
@@ -65,6 +67,15 @@ export default function HistorialSolicitante({ historial }: Props) {
 
       {abierto && (
         <div className="px-4 pb-4 pt-1 text-sm space-y-3 border-t border-secondary/10">
+          <section aria-label="Reputación del inquilino">
+            <h3 className="text-xs font-semibold text-primary mb-1">Calificación como inquilino</h3>
+            <p className="text-xs text-on-surface-variant">
+              {total_evaluaciones > 0
+                ? `${calificacion_promedio.toFixed(1)}/5 · ${total_evaluaciones} evaluación(es)`
+                : 'Sin evaluaciones previas'}
+            </p>
+          </section>
+
           <section aria-label="Rentas previas">
             <h3 className="text-xs font-semibold text-primary mb-1 flex items-center gap-1">
               <Home size={12} /> Rentas previas

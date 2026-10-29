@@ -92,25 +92,30 @@ export default function RegistroPage() {
                 type="password"
                 name="contrasena"
                 required
-                minLength={6}
-                placeholder="Mínimo 6 caracteres"
+                minLength={8}
+                placeholder="Mínimo 8 caracteres, incluye letras y números"
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
               />
             </div>
           </div>
 
-          {state?.error && (
+          {state?.success ? (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+              <p className="font-semibold">Confirma tu correo</p>
+              <p>{state.mensaje}</p>
+            </div>
+          ) : state?.error ? (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
               {state.error}
             </div>
-          )}
+          ) : null}
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || state?.success}
             className="w-full bg-[#3A4D39] text-white py-3 rounded-lg hover:bg-opacity-90 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Creando cuenta...' : 'Crear cuenta'}
+            {isPending ? 'Creando cuenta...' : state?.success ? 'Correo enviado' : 'Crear cuenta'}
           </button>
         </form>
 

@@ -1,57 +1,22 @@
-import { SignJWT, jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
 import { prisma } from './prisma'
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
-const COOKIE_NAME = 'rentify_session'
-
-export interface SessionPayload {
-  usuarioId: number
-  correo: string
-  esAdmin: boolean
-}
-
-export async function createSession(payload: SessionPayload) {
-  // La cookie solo se envía por HTTP y queda limitada a siete días; secure se activa en producción.
-  const token = await new SignJWT({
-    usuarioId: payload.usuarioId,
-    correo: payload.correo,
-    esAdmin: payload.esAdmin,
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(secret)
-
-  const cookieStore = await cookies()
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  })
-}
-
-export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(COOKIE_NAME)?.value
-  if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, secret)
-    return payload as unknown as SessionPayload
-  } catch {
-    return null
-  }
-}
+import { createSupabaseServerClient } from './supabase-server'
 
 export async function getCurrentUser() {
-  const session = await getSession()
-  if (!session) return null
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
 
-  // Se consulta el usuario actual para que el resto de la aplicación use sus roles y datos vigentes.
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: session.usuarioId },
+  if (error) {
+    console.error('Error al validar la sesión de Supabase:', error)
+    throw new Error('No se pudo validar la sesión. Intenta de nuevo.')
+  }
+
+  if (!user?.email) return null
+
+  let usuario = await prisma.usuario.findUnique({
+    where: { auth_user_id: user.id },
     include: {
       propietario: true,
       inquilino: true,
@@ -59,10 +24,27 @@ export async function getCurrentUser() {
     },
   })
 
-  return usuario
-}
+  if (!usuario) {
+    const cuentaExistente = await prisma.usuario.findFirst({
+      where: { correo: { equals: user.email, mode: 'insensitive' } },
+    })
 
-export async function destroySession() {
-  const cookieStore = await cookies()
-  cookieStore.delete(COOKIE_NAME)
+    if (!cuentaExistente) return null
+
+    usuario = await prisma.usuario.update({
+      where: { id: cuentaExistente.id },
+      data: {
+        auth_user_id: user.id,
+        verificado_email: Boolean(user.email_confirmed_at),
+      },
+      include: {
+        propietario: true,
+        inquilino: true,
+        administrador: true,
+      },
+    })
+  }
+
+  if (usuario.bloqueado) return null
+  return usuario
 }

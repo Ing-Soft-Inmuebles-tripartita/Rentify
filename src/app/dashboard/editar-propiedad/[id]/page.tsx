@@ -37,9 +37,21 @@ async function EditarContent({ params }: Props) {
   }
 
   const publicacion = inmueble.publicaciones[0]
+  const documentos = await prisma.documento.findMany({
+    where: { inmueble_id: inmueble.id },
+    select: {
+      id: true,
+      tipo_documento: true,
+      estado: true,
+      motivo_rechazo: true,
+      fecha_carga: true,
+    },
+    orderBy: { fecha_carga: 'desc' },
+  })
 
   return (
     <EditarPropiedadForm
+      documentos={documentos}
       inmueble={{
         id: inmueble.id,
         tipo_inmueble: inmueble.tipo_inmueble,
@@ -47,6 +59,8 @@ async function EditarContent({ params }: Props) {
         numero_habitaciones: inmueble.numero_habitaciones,
         numero_banos: inmueble.numero_banos,
         metros_cuadrados: inmueble.metros_cuadrados,
+        latitud: inmueble.latitud,
+        longitud: inmueble.longitud,
         servicios_incluidos: inmueble.servicios_incluidos,
         plazo_minimo_meses: inmueble.plazo_minimo_meses,
         mantenimiento_incluido: inmueble.mantenimiento_incluido,
@@ -57,6 +71,8 @@ async function EditarContent({ params }: Props) {
               deposito: publicacion.deposito,
               descripcion: publicacion.descripcion,
               reglas: publicacion.reglas,
+              permite_mascotas: publicacion.permite_mascotas,
+              permite_ninos: publicacion.permite_ninos,
               fotos: publicacion.fotos.map((f) => f.ruta_archivo),
             }
           : null,

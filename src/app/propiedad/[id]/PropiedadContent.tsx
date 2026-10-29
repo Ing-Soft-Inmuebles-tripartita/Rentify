@@ -34,6 +34,7 @@ import Navbar from '@/components/Navbar'
 import MapaPropiedad from '@/components/MapaPropiedad'
 import BotonReportar from './BotonReportar'
 import { getCurrentUser } from '@/lib/auth'
+import { parsearDisponibilidadVisitas } from '@/lib/disponibilidad-visitas'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -87,6 +88,18 @@ export default async function PropiedadContent({ params }: Props) {
 
   if (!publicacion) notFound()
 
+  const evaluacionesInmueble = await prisma.evaluacion.findMany({
+    where: {
+      tipo_evaluacion: 'inmueble',
+      experiencia: {
+        solicitud: { publicacion: { inmueble_id: publicacion.inmueble_id } },
+      },
+    },
+    include: { usuario_evaluador: true },
+    orderBy: { fecha_evaluacion: 'desc' },
+    take: 20,
+  })
+
   const imagenes = publicacion.fotos.map((f) => f.ruta_archivo)
   const imagenPrincipal = imagenes[0] || 'https://via.placeholder.com/800x500'
   const imagenesSecundarias = imagenes.slice(1, 5)
@@ -94,8 +107,11 @@ export default async function PropiedadContent({ params }: Props) {
     imagenesSecundarias.push(imagenPrincipal)
   }
 
-  const calificacion = publicacion.calificacion_promedio || 0
-  const totalResenas = publicacion.total_resenas || 0
+  const calificacion = publicacion.inmueble.calificacion_promedio || 0
+  const totalResenas = publicacion.inmueble.total_evaluaciones || 0
+  const disponibilidadVisitas = parsearDisponibilidadVisitas(
+    publicacion.inmueble.disponibilidad_visitas
+  )
 
   // Verificar si el usuario es el dueño (para no mostrar "Reportar" en su propia propiedad)
   const esPropietario = usuario?.id === publicacion.inmueble.propietario_id
@@ -263,11 +279,13 @@ export default async function PropiedadContent({ params }: Props) {
                         )}
                       </div>
                       <p className="text-xs text-on-surface-variant">
-                        Arrendador certificado desde 2021
+                        {publicacion.inmueble.propietario.usuario.total_evaluaciones_como_propietario > 0
+                          ? `${publicacion.inmueble.propietario.usuario.calificacion_promedio_como_propietario.toFixed(1)}/5 como propietario · ${publicacion.inmueble.propietario.usuario.total_evaluaciones_como_propietario} evaluación(es)`
+                          : 'Aún sin evaluaciones como propietario'}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant">
                         <span className="text-status-success flex items-center gap-1">
-                          <CheckCircle2 size={12} /> Responde en menos de 1 hora
+                          <CheckCircle2 size={12} /> Perfil de propietario Rentify
                         </span>
                       </div>
                     </div>
@@ -368,14 +386,18 @@ export default async function PropiedadContent({ params }: Props) {
               </div>
 
               {/* Reglas */}
-              {publicacion.reglas && (
-                <div className="bg-white rounded-2xl p-6 shadow-sm">
-                  <h2 className="text-xl font-bold text-primary mb-3">Reglas de convivencia</h2>
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-primary mb-3">Reglas de convivencia</h2>
+                <p className="mb-3 text-sm text-on-surface-variant">
+                  Mascotas: {publicacion.permite_mascotas ? 'permitidas' : 'no permitidas'} ·
+                  Niños: {publicacion.permite_ninos ? 'permitidos' : 'no permitidos'}
+                </p>
+                {publicacion.reglas && (
                   <p className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">
                     {publicacion.reglas}
                   </p>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Reseñas */}
               <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -388,25 +410,24 @@ export default async function PropiedadContent({ params }: Props) {
                     </p>
                   </div>
                 </div>
-                {publicacion.resenas.length === 0 ? (
+                {evaluacionesInmueble.length === 0 ? (
                   <p className="text-sm text-on-surface-variant italic">
-                    Aún no hay reseñas para esta propiedad.
+                    Aún no hay evaluaciones de rentas finalizadas para esta propiedad.
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {publicacion.resenas.map((resena) => (
-                      <div key={resena.id} className="p-4 rounded-xl bg-surface-canvas">
+                    {evaluacionesInmueble.map((evaluacion) => (
+                      <div key={evaluacion.id} className="p-4 rounded-xl bg-surface-canvas">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
-                            {resena.usuario.nombre.charAt(0)}
+                            {evaluacion.usuario_evaluador.nombre.charAt(0)}
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-on-surface">
-                              {resena.usuario.nombre} {resena.usuario.apellido}
+                              {evaluacion.usuario_evaluador.nombre} {evaluacion.usuario_evaluador.apellido}
                             </p>
                             <p className="text-[11px] text-on-surface-variant">
-                              {resena.duracion_meses && `Arrendatario por ${resena.duracion_meses} meses · `}
-                              {new Date(resena.fecha).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+                              {new Date(evaluacion.fecha_evaluacion).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
@@ -415,13 +436,15 @@ export default async function PropiedadContent({ params }: Props) {
                             <Star
                               key={i}
                               size={12}
-                              className={i < resena.calificacion ? 'fill-rating-gold' : 'text-gray-300'}
+                              className={i < evaluacion.calificacion ? 'fill-rating-gold' : 'text-gray-300'}
                             />
                           ))}
                         </div>
-                        <p className="text-xs text-on-surface-variant leading-relaxed">
-                          {resena.comentario}
-                        </p>
+                        {evaluacion.comentario && (
+                          <p className="text-xs text-on-surface-variant leading-relaxed">
+                            {evaluacion.comentario}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -521,6 +544,7 @@ export default async function PropiedadContent({ params }: Props) {
                     <SolicitarRentaButton
                       publicacionId={publicacion.id}
                       titulo={publicacion.inmueble.tipo_inmueble}
+                      disponibilidad={disponibilidadVisitas}
                       usuarioNombre={usuario?.nombre && usuario?.apellido ? `${usuario.nombre} ${usuario.apellido}` : undefined}
                       usuarioTelefono={usuario?.telefono || undefined}
                     />

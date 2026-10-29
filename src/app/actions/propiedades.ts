@@ -22,10 +22,16 @@ export async function publicarPropiedadAction(
   const numero_habitaciones = Number(formData.get('numero_habitaciones'))
   const numero_banos = Number(formData.get('numero_banos'))
   const metros_cuadrados = Number(formData.get('metros_cuadrados'))
+  const latitudTexto = String(formData.get('latitud') ?? '').trim()
+  const longitudTexto = String(formData.get('longitud') ?? '').trim()
+  const latitud = latitudTexto ? Number(latitudTexto) : null
+  const longitud = longitudTexto ? Number(longitudTexto) : null
   const precio_renta = Number(formData.get('precio_renta'))
   const deposito = Number(formData.get('deposito'))
   const descripcion = String(formData.get('descripcion') ?? '').trim()
   const reglas = String(formData.get('reglas') ?? '').trim()
+  const permite_mascotas = formData.get('permite_mascotas') === 'on'
+  const permite_ninos = formData.get('permite_ninos') === 'on'
   const mantenimientoIncluido = formData.get('mantenimiento_incluido') === 'on'
   const plazoMinimo = parseInt(formData.get('plazo_minimo_meses') as string) || 12
   const caracteristicasNombres = formData.getAll('caracteristicas') as string[]
@@ -49,6 +55,14 @@ export async function publicarPropiedadAction(
     metros_cuadrados <= 0
   ) {
     return { error: 'Revisa el número de habitaciones, baños y metros cuadrados.' }
+  }
+
+  if (
+    (latitud === null) !== (longitud === null) ||
+    (latitud !== null && (!Number.isFinite(latitud) || latitud < -90 || latitud > 90)) ||
+    (longitud !== null && (!Number.isFinite(longitud) || longitud < -180 || longitud > 180))
+  ) {
+    return { error: 'Captura latitud y longitud válidas para mostrar el mapa.' }
   }
 
   if (!Number.isFinite(precio_renta) || precio_renta <= 0 || !Number.isFinite(deposito) || deposito < 0) {
@@ -84,6 +98,8 @@ export async function publicarPropiedadAction(
           numero_habitaciones,
           numero_banos,
           metros_cuadrados,
+          latitud,
+          longitud,
           mantenimiento_incluido: mantenimientoIncluido,
           plazo_minimo_meses: plazoMinimo,
         },
@@ -116,6 +132,8 @@ export async function publicarPropiedadAction(
           deposito,
           descripcion,
           reglas: reglas || null,
+          permite_mascotas,
+          permite_ninos,
           estado: 'activa',
         },
       })

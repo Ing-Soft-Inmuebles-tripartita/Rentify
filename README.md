@@ -45,7 +45,7 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 - Página principal con acceso al catálogo.
 - Listado y filtrado por ubicación, tipo de inmueble, presupuesto y número de habitaciones.
 - Página de detalle con fotografías, descripción, renta, depósito, reglas, amenidades, condiciones y ubicación en mapa cuando hay coordenadas.
-- Calificaciones y reseñas asociadas a publicaciones.
+- Calificaciones de inmuebles basadas en experiencias de renta finalizadas.
 - Opción para reportar una publicación.
 
 ### Cuentas y perfil
@@ -61,7 +61,7 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 - Creación y edición de inmuebles y sus publicaciones.
 - Administración de precio de renta, depósito, descripción, reglas, fotografías, amenidades, servicios y plazo mínimo.
 - Solicitudes de renta que el propietario puede revisar, aprobar o rechazar.
-- Agendamiento de visitas con fecha, hora y modalidad.
+- Agendamiento de visitas con fecha, hora y modalidad; los propietarios configuran los días y el horario semanal de cada inmueble.
 - Dashboard con la actividad de las cuentas, propiedades y solicitudes.
 - Evaluaciones asociadas a experiencias de renta.
 
@@ -98,7 +98,7 @@ Las rutas `/dashboard` y `/perfil` requieren sesión. La administración no depe
 | `/login` | Inicio de sesión. |
 | `/registro` | Registro de cuenta. |
 | `/recuperar` | Solicitud de recuperación de contraseña. |
-| `/restablecer/[token]` | Formulario para establecer una contraseña nueva. |
+| `/restablecer` | Formulario para establecer una contraseña nueva desde el enlace de Supabase Auth. |
 | `/seguridad` | Información de seguridad. |
 | `/perfil` | Datos, preferencias y documentos de la cuenta autenticada. |
 | `/dashboard` | Panel principal de usuario; cambia según su información y roles. |
@@ -119,8 +119,9 @@ La interfaz está en español. Las rutas dinámicas usan el identificador de la 
 | Mutaciones | Next.js Server Actions | Operaciones de autenticación, perfil, propiedades, solicitudes y administración. |
 | Persistencia | PostgreSQL | Base de datos relacional. |
 | ORM | Prisma 6 | Modelos, consultas y migraciones. |
-| Sesiones | `jose` | JWT firmado en una cookie HTTP-only. |
-| Contraseñas | `bcryptjs` | Hash y verificación de contraseñas. |
+| Autenticación | Supabase Auth y `@supabase/ssr` | Sesiones seguras, confirmación de correo, recuperación y cambio de contraseña. |
+| Contraseñas | Supabase Auth y `bcryptjs` | Supabase gestiona las credenciales; bcrypt mantiene compatibilidad durante la vinculación de cuentas existentes. |
+| Correo | Resend y SMTP de Supabase | Notificaciones operativas desde Resend; correos de autenticación de Supabase mediante su SMTP. |
 | Archivos | Supabase Storage | Archivos de documentos subidos por usuarios. |
 | Mapas | Leaflet y React Leaflet | Ubicación de inmuebles con coordenadas. |
 | Iconografía | Lucide React | Iconos de la interfaz. |
@@ -129,9 +130,10 @@ La interfaz está en español. Las rutas dinámicas usan el identificador de la 
 
 - Las páginas de `src/app` representan las rutas del App Router.
 - Las operaciones que cambian datos se agrupan como Server Actions en `src/app/actions`.
-- `src/lib/auth.ts` centraliza lectura, creación y eliminación de sesión, además de la consulta del usuario actual.
+- `src/lib/auth.ts` valida la sesión con Supabase y vincula la identidad autenticada con el perfil Prisma.
+- `src/lib/supabase-server.ts` y `src/lib/supabase-client.ts` crean clientes Supabase con cookies SSR.
 - `src/lib/prisma.ts` comparte el cliente de Prisma durante el desarrollo para reducir conexiones durante las recargas.
-- El middleware realiza una comprobación inicial de la firma JWT para rutas privadas; cada operación de servidor vuelve a consultar la identidad y debe validar sus permisos.
+- `src/proxy.ts` actualiza las cookies y protege rutas privadas; cada Server Action vuelve a comprobar la identidad y los permisos.
 - Las mutaciones revalidan las rutas afectadas para refrescar el contenido del dashboard y de las páginas públicas.
 
 ## Modelo de datos
@@ -175,7 +177,7 @@ Los estados de roles, publicaciones, solicitudes y documentos se guardan como ca
 
 3. Crea un archivo `.env` en la carpeta donde está `package.json`. Configura las variables descritas en [Variables de entorno](#variables-de-entorno). No compartas ni subas ese archivo al repositorio.
 
-4. Aplica las migraciones existentes:
+4. Aplica las migraciones existentes en una base local o de desarrollo:
 
    ```bash
    npx prisma migrate dev
@@ -209,9 +211,12 @@ Define estas variables en `.env` en la raíz de la aplicación:
 | --- | --- | --- |
 | `DATABASE_URL` | Sí | URL de conexión PostgreSQL usada por Prisma en tiempo de ejecución. |
 | `DIRECT_URL` | Sí | URL de conexión directa que Prisma usa para operaciones de migración. |
-| `JWT_SECRET` | Sí | Secreto largo, aleatorio y privado para firmar y verificar las sesiones. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase. Tiene prefijo público porque se utiliza en el cliente de Storage. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Clave pública anon del proyecto Supabase; las políticas de Storage deben limitar su acceso. |
+| `NEXT_PUBLIC_APP_URL` | Sí en despliegue | URL pública del sitio, usada en los enlaces de confirmación y recuperación. En local puede ser `http://localhost:3000`. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Clave pública anon/publishable del proyecto Supabase. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sí para revisión de documentos | Clave privada usada únicamente en el servidor para generar enlaces temporales de lectura. Nunca debe exponerse al navegador. |
+| `RESEND_API_KEY` | Sí para notificaciones | API key privada de Resend para correos operativos. |
+| `RESEND_FROM_EMAIL` | Sí para notificaciones | Remitente autorizado en Resend, por ejemplo `Rentify <avisos@tu-dominio.com>`. |
 | `PRISMA_LOG_QUERIES` | No | Si vale exactamente `true`, Prisma registra consultas además de advertencias y errores. |
 
 Ejemplo de formato, usando valores propios:
@@ -219,13 +224,16 @@ Ejemplo de formato, usando valores propios:
 ```env
 DATABASE_URL="postgresql://USUARIO:CONTRASENA@HOST:6543/postgres?pgbouncer=true"
 DIRECT_URL="postgresql://USUARIO:CONTRASENA@HOST:5432/postgres"
-JWT_SECRET="genera-un-secreto-aleatorio-largo"
+NEXT_PUBLIC_APP_URL="https://rentify.tu-dominio.com"
 NEXT_PUBLIC_SUPABASE_URL="https://PROJECT-REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="CLAVE-PUBLICA-ANON"
+SUPABASE_SERVICE_ROLE_KEY="CLAVE-PRIVADA-SOLO-SERVIDOR"
+RESEND_API_KEY="re_..."
+RESEND_FROM_EMAIL="Rentify <avisos@tu-dominio-verificado.com>"
 PRISMA_LOG_QUERIES="false"
 ```
 
-Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. No copies credenciales reales a documentación, issues o commits. Aunque la clave anon es pública por diseño, no la confundas con una clave de servicio privada ni la uses para sustituir políticas de acceso.
+Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. No copies credenciales reales a documentación, issues o commits. La API key de Resend es privada; la clave anon/publishable de Supabase es pública por diseño y no sustituye las políticas de acceso.
 
 ## Base de datos y datos de demostración
 
@@ -250,14 +258,23 @@ El seed crea usuarios, perfiles, amenidades, inmuebles, publicaciones, fotos, re
 ## Supabase Storage y documentos
 
 1. Crea un bucket llamado `rentify` en el proyecto Supabase configurado.
-2. La interfaz carga archivos bajo la ruta `documentos/` del bucket.
+2. Configura el bucket como **privado**. La aplicación carga archivos bajo `documentos/{auth.uid()}/` y guarda solo la ruta del objeto, no un enlace público o firmado, en PostgreSQL.
 3. El formulario acepta PDF, JPG y PNG, con un límite de 5 MB por archivo.
-4. Al cargar, la aplicación genera una URL firmada y guarda esa referencia con el registro del documento en PostgreSQL.
-5. Los documentos aparecen como pendientes para revisión administrativa.
+4. Crea una política de inserción para que cada usuario autenticado solo pueda cargar archivos en su propia carpeta. Por ejemplo:
 
-Configura las políticas de Storage para permitir únicamente las operaciones necesarias. La aplicación usa una clave anon en el cliente; el JWT propio de Rentify no autentica automáticamente al usuario ante Supabase ni reemplaza las políticas del bucket. Mantén privados los documentos de identidad e ingresos y evita políticas amplias de lectura, escritura o borrado.
+   ```sql
+   create policy "Users upload documents to their own folder"
+   on storage.objects for insert to authenticated
+   with check (
+     bucket_id = 'rentify'
+     and (storage.foldername(name))[1] = 'documentos'
+     and (storage.foldername(name))[2] = auth.uid()::text
+   );
+   ```
 
-**Consideración de despliegue:** actualmente la URL firmada que genera el formulario tiene vigencia de un año y se guarda como `ruta_archivo`. Revisa si esa duración y el tratamiento de esas URL son adecuados para producción antes de almacenar documentos reales.
+5. Los documentos aparecen como pendientes para revisión administrativa. El servidor usa `SUPABASE_SERVICE_ROLE_KEY` para generar enlaces firmados de cinco minutos en el panel de revisión.
+
+No habilites lectura pública, y no expongas la clave service role al navegador. Si agregas operaciones de descarga para los usuarios, crea políticas de lectura limitadas a su propia carpeta.
 
 ## Cuentas de demostración
 
@@ -274,12 +291,22 @@ También se crean cuentas de ejemplo para las reseñas. Todas estas credenciales
 
 ## Correo electrónico y autenticación
 
-- Las sesiones duran siete días y se almacenan en una cookie `rentify_session` con atributos `HttpOnly` y `SameSite=Lax`; en producción se activa `Secure`.
-- Las contraseñas se almacenan como hashes generados con `bcryptjs`.
-- Las solicitudes de recuperación guardan un token con expiración de una hora. En el entorno actual el correo es simulado: el mensaje, su contenido y el enlace se imprimen en la terminal del servidor.
-- Los enlaces generados por el servicio de correo apuntan a `http://localhost:3000`; un despliegue requiere integrar un proveedor real y configurar una URL pública adecuada.
-- El registro guarda la cuenta con correo no verificado, pero actualmente ese estado no impide iniciar sesión; no hay un flujo completo de confirmación de correo.
-- Bloquear una cuenta impide nuevos inicios de sesión, pero no revoca de inmediato una sesión que ya estuviera abierta.
+Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación de correo, recuperación y cambio de contraseña. El Proxy y las Server Actions validan las sesiones con Supabase; los perfiles y roles de la aplicación continúan en PostgreSQL mediante Prisma. Las identidades se vinculan con `Usuario.auth_user_id`.
+
+### Configurar Supabase Auth y Resend
+
+1. En Supabase, habilita el proveedor de correo/contraseña y exige confirmar la dirección antes de iniciar sesión.
+2. En la configuración de URL de Auth, establece `NEXT_PUBLIC_APP_URL` como Site URL y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
+3. En Resend, verifica el dominio remitente. En Supabase, configura el SMTP personalizado con el host `smtp.resend.com`, puerto `465` (SSL), usuario `resend` y una API key de Resend como contraseña. Usa un remitente perteneciente al dominio verificado.
+4. Configura las plantillas de confirmación y recuperación de Supabase para usar el enlace de confirmación de Supabase (`{{ .ConfirmationURL }}`); comprueba que la URL de redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
+5. Configura en `.env` las claves públicas de Supabase, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
+6. Ejecuta las migraciones y reinicia la aplicación.
+
+Supabase Auth envía confirmaciones y recuperación por su SMTP configurado; los avisos transaccionales de solicitudes, decisiones, visitas, evaluaciones, documentos, moderación y reportes se envían por la API de Resend. Si una preferencia está desactivada, ese aviso no se envía. Los fallos quedan registrados como `fallida_email` y se reportan explícitamente; actualmente no hay una pantalla o proceso automático de reintento.
+
+Las cuentas previas de Rentify se pueden vincular al iniciar sesión si su contraseña heredada es válida y su correo todavía no tiene una identidad incompatible en Supabase. La primera vinculación requiere confirmar el correo. Si Supabase ya tiene una identidad para ese correo, usa el flujo de recuperación de Supabase antes de volver a iniciar sesión.
+
+Las sesiones y su duración se administran mediante Supabase Auth y cookies SSR; no se necesita configurar un `JWT_SECRET` propio. Un usuario bloqueado no puede entrar a las áreas protegidas ni ejecutar acciones de servidor.
 
 ## Comandos disponibles
 
@@ -318,17 +345,18 @@ rentify/
     │   ├── propiedades/        Catálogo y filtros
     │   ├── recuperar/          Solicitud de recuperación de contraseña
     │   ├── registro/            Alta de usuario
-    │   ├── restablecer/[token]/ Cambio de contraseña mediante token
+    │   ├── restablecer/         Cambio de contraseña mediante Supabase Auth
     │   └── seguridad/          Información de seguridad
     ├── components/             Componentes reutilizables de interfaz
     ├── lib/
-    │   ├── auth.ts             Sesiones y usuario actual
-    │   ├── email.ts            Correo simulado
+    │   ├── auth.ts             Usuario autenticado y perfil Rentify
+    │   ├── email.ts            Notificaciones de Resend
     │   ├── password.ts         Hash y verificación de contraseñas
     │   ├── prisma.ts           Cliente de base de datos
     │   ├── supabase-client.ts  Cliente Supabase Storage
     │   └── tokens.ts           Tokens y expiraciones
-    └── middleware.ts           Protección inicial de rutas privadas
+    ├── proxy.ts                Sesión SSR y protección de rutas privadas
+    └── app/auth/callback/      Confirmación y recuperación de Supabase Auth
 ```
 
 Las acciones de servidor están separadas por dominio:
@@ -349,8 +377,8 @@ Las acciones de servidor están separadas por dominio:
 
 - Es un proyecto académico; antes de usarlo con usuarios o documentos reales se deben revisar seguridad, privacidad, políticas de Storage, manejo de correo y operación de producción.
 - No existe integración de pagos.
-- Los correos son simulados y los enlaces usan localhost.
-- La verificación de correo no está implementada como requisito de acceso.
+- No se ha probado la entrega real de correos ni los flujos de Supabase con credenciales de despliegue.
+- La confirmación de correo depende de las URL permitidas, SMTP y plantillas configuradas en el proyecto Supabase.
 - No se ha configurado una suite de pruebas automatizadas.
 - El seed es destructivo y las cuentas de prueba tienen contraseñas conocidas.
 - El panel de guía contiene actualmente contenido introductorio básico.

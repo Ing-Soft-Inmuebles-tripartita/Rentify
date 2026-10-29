@@ -27,6 +27,10 @@ async function PropiedadesDestacadas() {
     estacionamiento: 1,
     metros: pub.inmueble.metros_cuadrados,
     tipo: pub.inmueble.tipo_inmueble,
+    permite_mascotas: pub.permite_mascotas,
+    permite_ninos: pub.permite_ninos,
+    calificacion_promedio: pub.inmueble.calificacion_promedio,
+    total_evaluaciones: pub.inmueble.total_evaluaciones,
     verificada:
       pub.inmueble.documento_verificado &&
       pub.inmueble.propietario.estado_verificacion === 'verificado',

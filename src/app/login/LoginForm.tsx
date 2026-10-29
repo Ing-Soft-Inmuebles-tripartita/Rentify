@@ -19,7 +19,7 @@ import { loginAction, FormState } from '@/app/actions/auth'
 
 const initialState: FormState = {}
 
-export default function LoginForm() {
+export default function LoginForm({ initialError }: { initialError?: string }) {
   const [state, formAction, isPending] = useActionState(loginAction, initialState)
   const [mostrarPassword, setMostrarPassword] = useState(false)
   const [emailValid, setEmailValid] = useState(false)
@@ -232,10 +232,15 @@ export default function LoginForm() {
                 </Link>
               </div>
 
-              {state?.error && (
+              {(state?.error || initialError) && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                   <AlertCircle size={16} />
-                  {state.error}
+                  {state?.error || initialError}
+                </div>
+              )}
+              {state?.success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
+                  {state.mensaje}
                 </div>
               )}
 

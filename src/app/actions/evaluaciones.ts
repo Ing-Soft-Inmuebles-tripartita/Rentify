@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { notificarPorCorreo } from '@/lib/email'
 
 export interface EvaluacionState {
   error?: string
@@ -44,6 +45,9 @@ export async function crearEvaluacionAction(
 
   if (!experiencia) {
     return { error: 'La experiencia de renta no existe' }
+  }
+  if (experiencia.estado !== 'finalizada') {
+    return { error: 'Las evaluaciones se habilitan al finalizar la renta.' }
   }
 
   const propietario_id = experiencia.solicitud.publicacion.inmueble.propietario_id
@@ -89,6 +93,15 @@ export async function crearEvaluacionAction(
         calificacion,
         comentario: comentario || null,
       },
+    })
+
+    const destinatarioId = tipo_evaluacion === 'inquilino' ? inquilino_id : propietario_id
+    await notificarPorCorreo({
+      usuarioId: destinatarioId,
+      tipo: 'evaluacion_recibida',
+      asunto: 'Recibiste una nueva evaluación',
+      mensaje: `Recibiste una evaluación de ${calificacion} estrellas sobre tu experiencia de renta.`,
+      preferencia: 'evaluaciones',
     })
 
     // Recalcular promedios

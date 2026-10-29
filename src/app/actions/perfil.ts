@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { hashPassword, verifyPassword } from '@/lib/password'
+import { hashPassword } from '@/lib/password'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export interface PerfilState {
   error?: string
@@ -16,7 +17,7 @@ export async function actualizarPerfilAction(
   formData: FormData
 ): Promise<PerfilState> {
   const usuario = await getCurrentUser()
-  if (!usuario) return { error: 'No autorizado' }
+  if (!usuario?.auth_user_id) return { error: 'No autorizado' }
 
   const nombre = formData.get('nombre') as string
   const apellido = formData.get('apellido') as string
@@ -62,20 +63,30 @@ export async function cambiarContrasenaAction(
     return { error: 'Todos los campos son obligatorios' }
   }
 
-  if (nueva.length < 6) {
-    return { error: 'La contraseña nueva debe tener al menos 6 caracteres' }
+  if (nueva.length < 8 || !/[A-Za-z]/.test(nueva) || !/\d/.test(nueva)) {
+    return { error: 'La contraseña nueva debe tener al menos 8 caracteres, una letra y un número' }
   }
 
   if (nueva !== confirmar) {
     return { error: 'Las contraseñas nuevas no coinciden' }
   }
 
-  const valida = await verifyPassword(actual, usuario.contrasena)
-  if (!valida) {
+  const supabase = await createSupabaseServerClient()
+  const { error: loginError } = await supabase.auth.signInWithPassword({
+    email: usuario.correo,
+    password: actual,
+  })
+  if (loginError) {
     return { error: 'La contraseña actual es incorrecta' }
   }
 
   try {
+    const { error: cambioError } = await supabase.auth.updateUser({ password: nueva })
+    if (cambioError) {
+      console.error('Error al cambiar contraseña en Supabase Auth:', cambioError)
+      return { error: 'No se pudo actualizar la contraseña' }
+    }
+
     const nuevaHash = await hashPassword(nueva)
     await prisma.usuario.update({
       where: { id: usuario.id },
@@ -99,6 +110,7 @@ export async function actualizarPreferenciasAction(
     solicitudes: formData.get('solicitudes') === 'on',
     visitas: formData.get('visitas') === 'on',
     evaluaciones: formData.get('evaluaciones') === 'on',
+    cuenta: formData.get('cuenta') === 'on',
     marketing: formData.get('marketing') === 'on',
   }
 
@@ -121,13 +133,25 @@ export async function subirDocumentoAction(
   formData: FormData
 ): Promise<PerfilState> {
   const usuario = await getCurrentUser()
-  if (!usuario) return { error: 'No autorizado' }
+  if (!usuario?.auth_user_id) return { error: 'No autorizado' }
 
-  const tipo_documento = formData.get('tipo_documento') as string
-  const ruta_archivo = formData.get('ruta_archivo') as string
+  const tipo_documento = formData.get('tipo_documento')
+  const ruta_archivo = formData.get('ruta_archivo')
 
-  if (!tipo_documento || !ruta_archivo) {
+  if (typeof tipo_documento !== 'string' || typeof ruta_archivo !== 'string') {
     return { error: 'Debes seleccionar un tipo y proporcionar el archivo' }
+  }
+
+  const tiposPermitidos = ['INE', 'COMPROBANTE_INGRESOS', 'COMPROBANTE_DOMICILIO', 'OTRO']
+  const prefijoSeguro = `documentos/${usuario.auth_user_id}/`
+  const nombreArchivo = ruta_archivo.startsWith(prefijoSeguro)
+    ? ruta_archivo.slice(prefijoSeguro.length)
+    : ''
+  if (
+    !tiposPermitidos.includes(tipo_documento) ||
+    !/^[a-zA-Z0-9-]+\.(pdf|jpg|jpeg|png)$/i.test(nombreArchivo)
+  ) {
+    return { error: 'El tipo o la ruta del documento no son válidos' }
   }
 
   try {
@@ -145,6 +169,56 @@ export async function subirDocumentoAction(
   } catch (error) {
     console.error('Error subir documento:', error)
     return { error: 'Error al subir el documento' }
+  }
+}
+
+export async function subirDocumentoPropiedadAction(
+  _prevState: PerfilState,
+  formData: FormData
+): Promise<PerfilState> {
+  const usuario = await getCurrentUser()
+  if (!usuario?.propietario || !usuario.auth_user_id) {
+    return { error: 'Debes iniciar sesión como propietario para subir documentos' }
+  }
+
+  const inmuebleId = Number(formData.get('inmueble_id'))
+  const tipoDocumento = formData.get('tipo_documento')
+  const rutaArchivo = formData.get('ruta_archivo')
+  if (!Number.isInteger(inmuebleId) || inmuebleId <= 0) {
+    return { error: 'El inmueble seleccionado no es válido' }
+  }
+  if (
+    typeof tipoDocumento !== 'string' ||
+    !['ESCRITURA', 'TITULO_PROPIEDAD', 'PREDIAL'].includes(tipoDocumento) ||
+    typeof rutaArchivo !== 'string' ||
+    !new RegExp(`^documentos/${usuario.auth_user_id}/[a-zA-Z0-9-]+\\.(pdf|jpg|jpeg|png)$`, 'i').test(rutaArchivo)
+  ) {
+    return { error: 'El tipo o la ruta del documento no son válidos' }
+  }
+
+  const inmueble = await prisma.inmueble.findUnique({
+    where: { id: inmuebleId },
+    select: { propietario_id: true },
+  })
+  if (!inmueble || inmueble.propietario_id !== usuario.id) {
+    return { error: 'No tienes permiso para verificar este inmueble' }
+  }
+
+  try {
+    await prisma.documento.create({
+      data: {
+        inmueble_id: inmuebleId,
+        tipo_documento: tipoDocumento,
+        ruta_archivo: rutaArchivo,
+        estado: 'pendiente',
+      },
+    })
+    revalidatePath('/dashboard/admin')
+    revalidatePath('/perfil')
+    return { success: true, mensaje: 'Documento legal enviado para revisión.' }
+  } catch (error) {
+    console.error('Error al subir documento legal:', error)
+    return { error: 'No se pudo registrar el documento legal.' }
   }
 }
 

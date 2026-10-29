@@ -49,6 +49,9 @@ async function PerfilContent() {
         <p className="text-gray-600 mt-1">
           {usuario.nombre} {usuario.apellido} · {usuario.correo}
         </p>
+        <p className={`text-sm mt-1 ${usuario.verificado_email ? 'text-green-700' : 'text-amber-700'}`}>
+          Correo {usuario.verificado_email ? 'verificado' : 'pendiente de verificación'}
+        </p>
       </div>
 
       <PerfilTabs usuario={usuario} referencias={referencias} />

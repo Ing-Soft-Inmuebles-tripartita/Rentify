@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { notificarPorCorreo } from '@/lib/email'
 
 export interface EditarInmuebleState {
   error?: string
@@ -51,10 +52,16 @@ export async function editarInmuebleAction(
     const numero_habitaciones = Number(formData.get('numero_habitaciones'))
     const numero_banos = Number(formData.get('numero_banos'))
     const metros_cuadrados = Number(formData.get('metros_cuadrados'))
+    const latitudTexto = String(formData.get('latitud') ?? '').trim()
+    const longitudTexto = String(formData.get('longitud') ?? '').trim()
+    const latitud = latitudTexto ? Number(latitudTexto) : null
+    const longitud = longitudTexto ? Number(longitudTexto) : null
     const precio_renta = Number(formData.get('precio_renta'))
     const deposito = Number(formData.get('deposito'))
     const descripcion = String(formData.get('descripcion') ?? '').trim()
     const reglas = String(formData.get('reglas') ?? '').trim()
+    const permite_mascotas = formData.get('permite_mascotas') === 'on'
+    const permite_ninos = formData.get('permite_ninos') === 'on'
     const servicios_incluidos = String(formData.get('servicios_incluidos') ?? '').trim()
     const plazo_minimo_meses = Number(formData.get('plazo_minimo_meses'))
     const mantenimiento_incluido = formData.get('mantenimiento_incluido') === 'on'
@@ -76,6 +83,14 @@ export async function editarInmuebleAction(
       metros_cuadrados <= 0
     ) {
       return { error: 'Revisa el número de habitaciones, baños y metros cuadrados' }
+    }
+
+    if (
+      (latitud === null) !== (longitud === null) ||
+      (latitud !== null && (!Number.isFinite(latitud) || latitud < -90 || latitud > 90)) ||
+      (longitud !== null && (!Number.isFinite(longitud) || longitud < -180 || longitud > 180))
+    ) {
+      return { error: 'Captura latitud y longitud válidas para mostrar el mapa' }
     }
 
     if (
@@ -117,6 +132,8 @@ export async function editarInmuebleAction(
           numero_habitaciones,
           numero_banos,
           metros_cuadrados,
+          latitud,
+          longitud,
           servicios_incluidos: servicios_incluidos || null,
           plazo_minimo_meses,
           mantenimiento_incluido,
@@ -131,6 +148,8 @@ export async function editarInmuebleAction(
             deposito,
             descripcion,
             reglas: reglas || null,
+            permite_mascotas,
+            permite_ninos,
           },
         })
         : await tx.publicacion.create({
@@ -190,11 +209,38 @@ export async function cambiarEstadoInmuebleAction(formData: FormData) {
   }
 
   try {
-    await verificarPropietario(inmueble_id)
+    const { inmueble } = await verificarPropietario(inmueble_id)
+    if (inmueble.estado_inventario === nuevo_estado) return
+
     await prisma.inmueble.update({
       where: { id: inmueble_id },
       data: { estado_inventario: nuevo_estado },
     })
+
+    const solicitudes = await prisma.solicitudRenta.findMany({
+      where: {
+        publicacion: { inmueble_id },
+        estado: { in: ['pendiente', 'aprobada'] },
+      },
+      select: { inquilino_id: true },
+    })
+    const etiquetasEstado: Record<string, string> = {
+      disponible: 'disponible',
+      en_negociacion: 'en negociación',
+      rentado: 'rentado',
+      pausado: 'pausado',
+    }
+    await Promise.all(
+      [...new Set(solicitudes.map(({ inquilino_id }) => inquilino_id))].map((inquilinoId) =>
+        notificarPorCorreo({
+          usuarioId: inquilinoId,
+          tipo: 'estado_inmueble_actualizado',
+          asunto: 'Actualización del estado de una propiedad',
+          mensaje: `El inmueble "${inmueble.tipo_inmueble}" cambió al estado ${etiquetasEstado[nuevo_estado]}.`,
+          preferencia: 'solicitudes',
+        })
+      )
+    )
 
     revalidatePath('/dashboard')
     revalidatePath('/propiedades')

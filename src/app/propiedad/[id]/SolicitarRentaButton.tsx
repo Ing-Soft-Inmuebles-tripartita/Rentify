@@ -13,6 +13,10 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { agendarVisitaAction, VisitaState } from '@/app/actions/visitas'
+import {
+  horaDisponible,
+  type FranjaDisponibilidad,
+} from '@/lib/disponibilidad-visitas'
 
 const initialState: VisitaState = {}
 
@@ -21,6 +25,7 @@ interface Props {
   titulo: string
   usuarioNombre?: string
   usuarioTelefono?: string
+  disponibilidad: FranjaDisponibilidad[] | null
 }
 
 // Genera los próximos 7 días a partir de hoy
@@ -36,6 +41,7 @@ function generarDias() {
     dias.push({
       iso: fecha.toISOString().split('T')[0],
       diaSemana: diasSemana[fecha.getDay()],
+      diaSemanaNumero: fecha.getDay(),
       dia: fecha.getDate(),
       mes: meses[fecha.getMonth()],
       label: i === 1 ? 'Mañana' : diasSemana[fecha.getDay()],
@@ -57,6 +63,7 @@ export default function SolicitarRentaButton({
   titulo,
   usuarioNombre = '',
   usuarioTelefono = '',
+  disponibilidad,
 }: Props) {
   const [abierto, setAbierto] = useState(false)
   const [modalidad, setModalidad] = useState<'presencial' | 'videollamada'>('presencial')
@@ -67,7 +74,18 @@ export default function SolicitarRentaButton({
     initialState
   )
 
-  const dias = generarDias()
+  const dias = generarDias().filter((dia) =>
+    disponibilidad === null ||
+    (disponibilidad.some((franja) => franja.dia_semana === dia.diaSemanaNumero) &&
+      HORARIOS.some((horario) =>
+        horaDisponible(disponibilidad, dia.iso, horario.value)
+      ))
+  )
+  const horariosDisponibles = HORARIOS.filter(
+    (horario) =>
+      !fechaSeleccionada ||
+      horaDisponible(disponibilidad, fechaSeleccionada, horario.value)
+  )
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     if (!fechaSeleccionada || !horaSeleccionada) {
@@ -177,7 +195,12 @@ export default function SolicitarRentaButton({
                   </div>
 
                   {/* Días */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                  {dias.length === 0 ? (
+                    <p className="mb-4 rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
+                      El propietario aún no configuró horarios disponibles para los próximos días.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
                     {dias.map((dia) => (
                       <button
                         key={dia.iso}
@@ -200,16 +223,22 @@ export default function SolicitarRentaButton({
                         </span>
                       </button>
                     ))}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Horarios */}
                   <div className="bg-surface-container-lowest p-3 rounded-xl space-y-3">
+                    {fechaSeleccionada && horariosDisponibles.length === 0 && (
+                      <p className="text-xs text-on-surface-variant">
+                        No hay horarios disponibles para el día seleccionado.
+                      </p>
+                    )}
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-semibold flex items-center gap-1 mb-2">
                         ☀️ Mañana
                       </span>
                       <div className="grid grid-cols-2 gap-2">
-                        {HORARIOS.filter((h) => h.periodo === 'mañana').map((h) => (
+                        {horariosDisponibles.filter((h) => h.periodo === 'mañana').map((h) => (
                           <button
                             key={h.value}
                             type="button"
@@ -231,7 +260,7 @@ export default function SolicitarRentaButton({
                         🌇 Tarde
                       </span>
                       <div className="grid grid-cols-3 gap-2">
-                        {HORARIOS.filter((h) => h.periodo === 'tarde').map((h) => (
+                        {horariosDisponibles.filter((h) => h.periodo === 'tarde').map((h) => (
                           <button
                             key={h.value}
                             type="button"

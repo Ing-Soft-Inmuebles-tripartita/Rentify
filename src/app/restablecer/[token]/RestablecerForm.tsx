@@ -7,11 +7,7 @@ import { restablecerContrasenaAction, FormState } from '@/app/actions/auth'
 
 const initialState: FormState = {}
 
-interface Props {
-  token: string
-}
-
-export default function RestablecerForm({ token }: Props) {
+export default function RestablecerForm() {
   const [state, formAction, isPending] = useActionState(
     restablecerContrasenaAction,
     initialState
@@ -38,8 +34,6 @@ export default function RestablecerForm({ token }: Props) {
         </div>
 
         <form action={formAction} className="space-y-4">
-          <input type="hidden" name="token" value={token} />
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Contraseña nueva
@@ -50,8 +44,8 @@ export default function RestablecerForm({ token }: Props) {
                 type="password"
                 name="contrasena"
                 required
-                minLength={6}
-                placeholder="Mínimo 6 caracteres"
+                minLength={8}
+                placeholder="Mínimo 8 caracteres, incluye letras y números"
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
               />
             </div>
@@ -67,7 +61,7 @@ export default function RestablecerForm({ token }: Props) {
                 type="password"
                 name="confirmar"
                 required
-                minLength={6}
+                minLength={8}
                 placeholder="Repite la contraseña"
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
               />

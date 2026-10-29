@@ -1,11 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Upload, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
-import { subirDocumentoAction } from '@/app/actions/perfil'
+import {
+  subirDocumentoAction,
+  subirDocumentoPropiedadAction,
+} from '@/app/actions/perfil'
 
-export default function SubirDocumento() {
+export default function SubirDocumento({ inmuebleId }: { inmuebleId?: number }) {
+  const router = useRouter()
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
@@ -33,9 +38,15 @@ export default function SubirDocumento() {
     setSubiendo(true)
 
     try {
-      const ext = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const path = `documentos/${fileName}`
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) throw new Error('Inicia sesión de nuevo para subir documentos.')
+
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      if (!extension || !['pdf', 'jpg', 'jpeg', 'png'].includes(extension)) {
+        throw new Error('El archivo debe ser PDF, JPG o PNG.')
+      }
+      const fileName = `${crypto.randomUUID()}.${extension}`
+      const path = `documentos/${user.id}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('rentify')
@@ -45,20 +56,14 @@ export default function SubirDocumento() {
         throw new Error(`Error al subir: ${uploadError.message}`)
       }
 
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('rentify')
-        .createSignedUrl(path, 60 * 60 * 24 * 365)
-
-      if (signedError) {
-        throw new Error(`Error al generar URL: ${signedError.message}`)
-      }
-
-      // Se guarda la referencia del archivo junto con el tipo para que el servidor la asocie al usuario.
       const formData = new FormData()
       formData.set('tipo_documento', tipoSelect.value)
-      formData.set('ruta_archivo', signedData.signedUrl)
+      formData.set('ruta_archivo', path)
+      if (inmuebleId) formData.set('inmueble_id', String(inmuebleId))
 
-      const result = await subirDocumentoAction({}, formData)
+      const result = inmuebleId
+        ? await subirDocumentoPropiedadAction({}, formData)
+        : await subirDocumentoAction({}, formData)
 
       if (result.error) {
         throw new Error(result.error)
@@ -66,6 +71,7 @@ export default function SubirDocumento() {
 
       setExito(true)
       form.reset()
+      router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al subir el archivo')
     } finally {
@@ -77,18 +83,26 @@ export default function SubirDocumento() {
     <form onSubmit={handleSubmit} className="bg-gray-50 p-4 rounded-lg space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tipo de documento
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
           <select
+            name="tipo_documento"
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none bg-white"
           >
-            <option value="INE">INE / Identificación oficial</option>
-            <option value="Comprobante de ingresos">Comprobante de ingresos</option>
-            <option value="Comprobante de domicilio">Comprobante de domicilio</option>
-            <option value="Escritura">Escritura de propiedad</option>
-            <option value="Otro">Otro</option>
+            {inmuebleId ? (
+              <>
+                <option value="ESCRITURA">Escritura</option>
+                <option value="TITULO_PROPIEDAD">Título de propiedad</option>
+                <option value="PREDIAL">Predial</option>
+              </>
+            ) : (
+              <>
+                <option value="INE">INE / Identificación oficial</option>
+                <option value="COMPROBANTE_INGRESOS">Comprobante de ingresos</option>
+                <option value="COMPROBANTE_DOMICILIO">Comprobante de domicilio</option>
+                <option value="OTRO">Otro</option>
+              </>
+            )}
           </select>
         </div>
 

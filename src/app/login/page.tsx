@@ -3,14 +3,30 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import LoginForm from './LoginForm'
 
-async function LoginContent() {
+async function LoginContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ correo?: string }>
+}) {
   const usuario = await getCurrentUser()
   if (usuario) redirect('/dashboard')
 
-  return <LoginForm />
+  const { correo } = await searchParams
+  const initialError =
+    correo === 'error'
+      ? 'El enlace de correo no es válido o expiró. Solicita uno nuevo.'
+      : correo === 'cuenta'
+        ? 'No se encontró un perfil activo asociado a este correo.'
+        : undefined
+
+  return <LoginForm initialError={initialError} />
 }
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ correo?: string }>
+}) {
   return (
     <Suspense
       fallback={
@@ -19,7 +35,7 @@ export default function LoginPage() {
         </main>
       }
     >
-      <LoginContent />
+      <LoginContent searchParams={searchParams} />
     </Suspense>
   )
 }

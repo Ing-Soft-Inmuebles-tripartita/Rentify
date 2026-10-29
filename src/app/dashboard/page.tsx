@@ -16,7 +16,10 @@ import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import SolicitudRecibidaCard from './SolicitudRecibidaCard'
 import { eliminarInmuebleAction } from '@/app/actions/inmuebles'
+import { finalizarRentaAction } from '@/app/actions/solicitudes'
+import { cancelarVisitaAction, completarVisitaAction } from '@/app/actions/visitas'
 import CambiarEstadoInmuebleForm from './CambiarEstadoInmuebleForm'
+import DisponibilidadVisitasForm from './DisponibilidadVisitasForm'
 
 async function DashboardContent() {
   const usuario = await getCurrentUser()
@@ -32,9 +35,30 @@ async function DashboardContent() {
               fotos: { take: 1, orderBy: { orden: 'asc' } },
             },
           },
+          visitas: { orderBy: { fecha_hora: 'asc' } },
         },
         orderBy: { fecha_solicitud: 'desc' },
         take: 5,
+      })
+    : []
+
+  const rentasActivas = usuario.propietario
+    ? await prisma.experienciaRenta.findMany({
+        where: {
+          estado: 'activa',
+          solicitud: {
+            publicacion: { inmueble: { propietario_id: usuario.propietario.usuario_id } },
+          },
+        },
+        include: {
+          solicitud: {
+            include: {
+              inquilino: { include: { usuario: true } },
+              publicacion: { include: { inmueble: true } },
+            },
+          },
+        },
+        orderBy: { fecha_inicio: 'desc' },
       })
     : []
 
@@ -104,14 +128,17 @@ async function DashboardContent() {
   >()
   for (const experiencia of experienciasPrevias) {
     const inquilinoId = experiencia.solicitud.inquilino_id
+    const evaluacionesInquilino = experiencia.evaluaciones.filter(
+      (evaluacion) => evaluacion.tipo_evaluacion === 'inquilino'
+    )
     const calificacion =
-      experiencia.evaluaciones.length > 0
+      evaluacionesInquilino.length > 0
         ? Math.round(
-            (experiencia.evaluaciones.reduce(
+            (evaluacionesInquilino.reduce(
               (total, evaluacion) => total + evaluacion.calificacion,
               0
             ) /
-              experiencia.evaluaciones.length) *
+              evaluacionesInquilino.length) *
               10
           ) / 10
         : 0
@@ -298,6 +325,10 @@ async function DashboardContent() {
                       inmuebleId={inm.id}
                       estadoActual={inm.estado_inventario}
                     />
+                    <DisponibilidadVisitasForm
+                      inmuebleId={inm.id}
+                      disponibilidadGuardada={inm.disponibilidad_visitas}
+                    />
 
                     {/* Acciones */}
                     <div className="flex gap-2 mt-3">
@@ -352,7 +383,9 @@ async function DashboardContent() {
                     sol.publicacion.fotos[0]?.ruta_archivo ||
                     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400',
                   historial: {
-                    verificado: sol.inquilino.estado_verificacion === 'aprobado',
+                    verificado: sol.inquilino.estado_verificacion === 'verificado',
+                    calificacion_promedio: sol.inquilino.usuario.calificacion_promedio_como_inquilino,
+                    total_evaluaciones: sol.inquilino.usuario.total_evaluaciones_como_inquilino,
                     referencias: sol.inquilino.referencias.map((referencia) => ({
                       id: referencia.id,
                       nombre_contacto: referencia.nombre_contacto,
@@ -420,6 +453,27 @@ async function DashboardContent() {
                 >
                   {visita.estado}
                 </span>
+                {visita.estado === 'agendada' && (
+                  <div className="flex flex-col gap-1">
+                    {visita.fecha_hora <= new Date() && (
+                      <form action={completarVisitaAction}>
+                        <input type="hidden" name="visita_id" value={visita.id} />
+                        <button className="rounded bg-green-700 px-2 py-1 text-xs text-white">
+                          Completar
+                        </button>
+                      </form>
+                    )}
+                    {visita.fecha_hora > new Date() && (
+                      <form action={cancelarVisitaAction}>
+                        <input type="hidden" name="visita_id" value={visita.id} />
+                        <input type="hidden" name="motivo" value="Cancelada por el propietario" />
+                        <button className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+                          Cancelar
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -467,6 +521,24 @@ async function DashboardContent() {
                     <p className="text-xs text-on-surface-variant truncate">
                       {sol.publicacion.inmueble.direccion}
                     </p>
+                    {sol.visitas.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {sol.visitas.map((visita) => (
+                          <div key={visita.id} className="flex flex-wrap items-center gap-2 text-xs">
+                            <span>
+                              Visita {visita.estado} · {new Date(visita.fecha_hora).toLocaleString('es-MX')}
+                            </span>
+                            {visita.estado === 'agendada' && visita.fecha_hora > new Date() && (
+                              <form action={cancelarVisitaAction}>
+                                <input type="hidden" name="visita_id" value={visita.id} />
+                                <input type="hidden" name="motivo" value="Cancelada por el inquilino" />
+                                <button className="text-red-700 underline">Cancelar</button>
+                              </form>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -482,6 +554,32 @@ async function DashboardContent() {
                 </div>
               ))}
             </div>
+          )}
+
+          {usuario.propietario && rentasActivas.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-xl font-bold text-primary">Contratos activos</h2>
+              <div className="space-y-3">
+                {rentasActivas.map((renta) => (
+                  <div key={renta.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-sm">
+                    <div>
+                      <p className="font-semibold text-primary">
+                        {renta.solicitud.publicacion.inmueble.tipo_inmueble} · {renta.solicitud.inquilino.usuario.nombre} {renta.solicitud.inquilino.usuario.apellido}
+                      </p>
+                      <p className="text-xs text-on-surface-variant">
+                        Inicio: {new Date(renta.fecha_inicio).toLocaleDateString('es-MX')}
+                      </p>
+                    </div>
+                    <form action={finalizarRentaAction}>
+                      <input type="hidden" name="experiencia_id" value={renta.id} />
+                      <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">
+                        Finalizar renta
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
         </div>
       )}

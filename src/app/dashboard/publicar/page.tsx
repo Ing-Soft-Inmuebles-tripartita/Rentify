@@ -63,8 +63,12 @@ export default function PublicarPage() {
   const [numeroHabitaciones, setNumeroHabitaciones] = useState('1')
   const [numeroBanos, setNumeroBanos] = useState('1')
   const [metrosCuadrados, setMetrosCuadrados] = useState('')
+  const [latitud, setLatitud] = useState('')
+  const [longitud, setLongitud] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [reglas, setReglas] = useState('')
+  const [permiteMascotas, setPermiteMascotas] = useState(false)
+  const [permiteNinos, setPermiteNinos] = useState(true)
   const [precioRenta, setPrecioRenta] = useState('')
   const [deposito, setDeposito] = useState('')
   const [amenidadesSeleccionadas, setAmenidadesSeleccionadas] = useState<string[]>([])
@@ -168,8 +172,12 @@ export default function PublicarPage() {
         <input type="hidden" name="numero_habitaciones" value={numeroHabitaciones} />
         <input type="hidden" name="numero_banos" value={numeroBanos} />
         <input type="hidden" name="metros_cuadrados" value={metrosCuadrados} />
+        <input type="hidden" name="latitud" value={latitud} />
+        <input type="hidden" name="longitud" value={longitud} />
         <input type="hidden" name="descripcion" value={descripcion} />
         <input type="hidden" name="reglas" value={reglas} />
+        <input type="hidden" name="permite_mascotas" value={permiteMascotas ? 'on' : ''} />
+        <input type="hidden" name="permite_ninos" value={permiteNinos ? 'on' : ''} />
         <input
           type="hidden"
           name="mantenimiento_incluido"
@@ -234,6 +242,30 @@ export default function PublicarPage() {
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary focus:border-transparent outline-none text-sm"
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm font-semibold text-primary">
+                    Latitud (opcional)
+                    <input
+                      type="number"
+                      step="any"
+                      value={latitud}
+                      onChange={(event) => setLatitud(event.target.value)}
+                      placeholder="20.6597"
+                      className="mt-1 w-full rounded-xl border border-gray-200 bg-surface-canvas px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm font-semibold text-primary">
+                    Longitud (opcional)
+                    <input
+                      type="number"
+                      step="any"
+                      value={longitud}
+                      onChange={(event) => setLongitud(event.target.value)}
+                      placeholder="-103.3496"
+                      className="mt-1 w-full rounded-xl border border-gray-200 bg-surface-canvas px-3 py-2 text-sm"
+                    />
+                  </label>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -317,6 +349,26 @@ export default function PublicarPage() {
                     onChange={(e) => setReglas(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-surface-canvas border border-gray-200 focus:ring-2 focus:ring-secondary outline-none text-sm resize-none"
                   />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex items-start gap-3 rounded-xl bg-surface-canvas p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={permiteMascotas}
+                      onChange={(event) => setPermiteMascotas(event.target.checked)}
+                      className="mt-1 accent-secondary"
+                    />
+                    <span>Se permiten mascotas</span>
+                  </label>
+                  <label className="flex items-start gap-3 rounded-xl bg-surface-canvas p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={permiteNinos}
+                      onChange={(event) => setPermiteNinos(event.target.checked)}
+                      className="mt-1 accent-secondary"
+                    />
+                    <span>Se permiten niños</span>
+                  </label>
                 </div>
               </div>
             </div>
