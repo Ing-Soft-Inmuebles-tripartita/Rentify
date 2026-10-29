@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 
 // Todas las mutaciones del panel vuelven a verificar el rol en el servidor.
 async function verificarAdmin() {
@@ -70,12 +70,10 @@ export async function suspenderPublicacionAction(formData: FormData) {
     where: { id: publicacionId },
     include: { inmueble: true },
   })
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: publicacion.inmueble.propietario_id,
     tipo: 'publicacion_suspendida',
-    asunto: 'Tu publicación fue suspendida',
     mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" fue suspendida. Motivo: ${motivo}`,
-    preferencia: 'cuenta',
   })
   revalidarModeracion()
 }
@@ -100,12 +98,10 @@ export async function reactivarPublicacionAction(formData: FormData) {
     where: { id: publicacionId },
     include: { inmueble: true },
   })
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: publicacion.inmueble.propietario_id,
     tipo: 'publicacion_reactivada',
-    asunto: 'Tu publicación fue reactivada',
     mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" ya está activa nuevamente.`,
-    preferencia: 'cuenta',
   })
   revalidarModeracion()
 }
@@ -205,12 +201,10 @@ export async function aprobarDocumentoAction(formData: FormData) {
     : null
   const destinatarioId = documentoAnterior.usuario_id ?? propietarioId
   if (destinatarioId) {
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: destinatarioId,
       tipo: 'documento_aprobado',
-      asunto: 'Documento verificado',
       mensaje: `Tu documento "${documentoAnterior.tipo_documento}" fue aprobado.`,
-      preferencia: 'cuenta',
     })
   }
 
@@ -263,12 +257,10 @@ export async function rechazarDocumentoAction(formData: FormData) {
     : null
   const destinatarioId = documentoAnterior.usuario_id ?? propietarioId
   if (destinatarioId) {
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: destinatarioId,
       tipo: 'documento_rechazado',
-      asunto: 'Documento rechazado',
       mensaje: `Tu documento "${documentoAnterior.tipo_documento}" fue rechazado. Motivo: ${motivo}`,
-      preferencia: 'cuenta',
     })
   }
 
@@ -363,14 +355,12 @@ export async function resolverReporteAction(formData: FormData) {
       },
     })
     const propietarioId = reporte.publicacion.inmueble.propietario.usuario_id
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: propietarioId,
       tipo: accion === 'bloquear_usuario' ? 'usuario_bloqueado' : 'publicacion_suspendida',
-      asunto: accion === 'bloquear_usuario' ? 'Tu cuenta fue bloqueada' : 'Tu publicación fue suspendida',
       mensaje: accion === 'bloquear_usuario'
         ? `Tu cuenta fue bloqueada por un reporte. Motivo: ${reporte.motivo}`
         : `Tu publicación fue suspendida por un reporte. Motivo: ${reporte.motivo}`,
-      preferencia: 'cuenta',
     })
   }
 
@@ -425,12 +415,10 @@ export async function bloquearUsuarioAction(formData: FormData) {
     throw new Error('El usuario no existe o no se puede bloquear')
   }
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId,
     tipo: 'usuario_bloqueado',
-    asunto: 'Tu cuenta fue bloqueada',
     mensaje: `Tu cuenta fue bloqueada por el equipo de Rentify. Motivo: ${motivo}`,
-    preferencia: 'cuenta',
   })
   revalidatePath('/dashboard/admin')
 }
@@ -450,12 +438,10 @@ export async function desbloquearUsuarioAction(formData: FormData) {
     throw new Error('El usuario no existe o no está bloqueado')
   }
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId,
     tipo: 'usuario_desbloqueado',
-    asunto: 'Tu cuenta fue desbloqueada',
     mensaje: 'Tu cuenta vuelve a estar activa en Rentify.',
-    preferencia: 'cuenta',
   })
   revalidatePath('/dashboard/admin')
 }

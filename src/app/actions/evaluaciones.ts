@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 
 export interface EvaluacionState {
   error?: string
@@ -96,12 +96,10 @@ export async function crearEvaluacionAction(
     })
 
     const destinatarioId = tipo_evaluacion === 'inquilino' ? inquilino_id : propietario_id
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: destinatarioId,
       tipo: 'evaluacion_recibida',
-      asunto: 'Recibiste una nueva evaluación',
       mensaje: `Recibiste una evaluación de ${calificacion} estrellas sobre tu experiencia de renta.`,
-      preferencia: 'evaluaciones',
     })
 
     // Recalcular promedios

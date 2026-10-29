@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 
 export interface SolicitudState {
   error?: string
@@ -89,12 +89,10 @@ export async function crearSolicitudAction(
       },
     })
 
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: publicacion.inmueble.propietario_id,
       tipo: 'solicitud_renta',
-      asunto: 'Nueva solicitud de renta',
       mensaje: `${usuario.nombre} ${usuario.apellido} solicitó rentar "${publicacion.inmueble.tipo_inmueble}" en ${publicacion.inmueble.direccion}.`,
-      preferencia: 'solicitudes',
     })
 
     revalidatePath('/dashboard')
@@ -146,12 +144,10 @@ export async function aprobarSolicitudAction(formData: FormData) {
     })
   })
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: solicitud.inquilino_id,
     tipo: 'solicitud_aprobada',
-    asunto: 'Tu solicitud de renta fue aprobada',
     mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue aprobada.`,
-    preferencia: 'solicitudes',
   })
 
   revalidatePath('/dashboard')
@@ -187,12 +183,10 @@ export async function finalizarRentaAction(formData: FormData) {
     where: { id: experienciaId },
     data: { estado: 'finalizada', fecha_fin: new Date() },
   })
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: experiencia.solicitud.inquilino_id,
     tipo: 'renta_finalizada',
-    asunto: 'Tu renta fue finalizada',
     mensaje: `La renta de "${experiencia.solicitud.publicacion.inmueble.tipo_inmueble}" fue finalizada. Ya puedes evaluar la vivienda y al propietario.`,
-    preferencia: 'evaluaciones',
   })
 
   revalidatePath('/dashboard')
@@ -219,12 +213,10 @@ export async function rechazarSolicitudAction(formData: FormData) {
     data: { estado: 'rechazada' },
   })
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: solicitud.inquilino_id,
     tipo: 'solicitud_rechazada',
-    asunto: 'Actualización sobre tu solicitud de renta',
     mensaje: `Tu solicitud para "${solicitud.publicacion.inmueble.tipo_inmueble}" fue rechazada.`,
-    preferencia: 'solicitudes',
   })
 
   revalidatePath('/dashboard')

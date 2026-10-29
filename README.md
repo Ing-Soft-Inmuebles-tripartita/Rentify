@@ -121,7 +121,7 @@ La interfaz está en español. Las rutas dinámicas usan el identificador de la 
 | ORM | Prisma 6 | Modelos, consultas y migraciones. |
 | Autenticación | Supabase Auth y `@supabase/ssr` | Sesiones seguras, confirmación de correo, recuperación y cambio de contraseña. |
 | Contraseñas | Supabase Auth y `bcryptjs` | Supabase gestiona las credenciales; bcrypt mantiene compatibilidad durante la vinculación de cuentas existentes. |
-| Correo | Resend y SMTP de Supabase | Notificaciones operativas desde Resend; correos de autenticación de Supabase mediante su SMTP. |
+| Correo | Supabase Auth | Confirmación y recuperación de cuenta mediante correo de autenticación de Supabase. Los avisos operativos se guardan y muestran dentro de Rentify. |
 | Archivos | Supabase Storage | Archivos de documentos subidos por usuarios. |
 | Mapas | Leaflet y React Leaflet | Ubicación de inmuebles con coordenadas. |
 | Iconografía | Lucide React | Iconos de la interfaz. |
@@ -215,8 +215,6 @@ Define estas variables en `.env` en la raíz de la aplicación:
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Clave pública anon/publishable del proyecto Supabase. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Sí para revisión de documentos | Clave privada usada únicamente en el servidor para generar enlaces temporales de lectura. Nunca debe exponerse al navegador. |
-| `RESEND_API_KEY` | Sí para notificaciones | API key privada de Resend para correos operativos. |
-| `RESEND_FROM_EMAIL` | Sí para notificaciones | Remitente autorizado en Resend, por ejemplo `Rentify <avisos@tu-dominio.com>`. |
 | `PRISMA_LOG_QUERIES` | No | Si vale exactamente `true`, Prisma registra consultas además de advertencias y errores. |
 
 Ejemplo de formato, usando valores propios:
@@ -228,12 +226,10 @@ NEXT_PUBLIC_APP_URL="https://rentify.tu-dominio.com"
 NEXT_PUBLIC_SUPABASE_URL="https://PROJECT-REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="CLAVE-PUBLICA-ANON"
 SUPABASE_SERVICE_ROLE_KEY="CLAVE-PRIVADA-SOLO-SERVIDOR"
-RESEND_API_KEY="re_..."
-RESEND_FROM_EMAIL="Rentify <avisos@tu-dominio-verificado.com>"
 PRISMA_LOG_QUERIES="false"
 ```
 
-Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. No copies credenciales reales a documentación, issues o commits. La API key de Resend es privada; la clave anon/publishable de Supabase es pública por diseño y no sustituye las políticas de acceso.
+Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. No copies credenciales reales a documentación, issues o commits. La clave service role es privada y la clave anon/publishable de Supabase es pública por diseño, pero no sustituye las políticas de acceso.
 
 ## Base de datos y datos de demostración
 
@@ -293,16 +289,14 @@ También se crean cuentas de ejemplo para las reseñas. Todas estas credenciales
 
 Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación de correo, recuperación y cambio de contraseña. El Proxy y las Server Actions validan las sesiones con Supabase; los perfiles y roles de la aplicación continúan en PostgreSQL mediante Prisma. Las identidades se vinculan con `Usuario.auth_user_id`.
 
-### Configurar Supabase Auth y Resend
+### Configurar los correos de Supabase Auth
 
 1. En Supabase, habilita el proveedor de correo/contraseña y exige confirmar la dirección antes de iniciar sesión.
 2. En la configuración de URL de Auth, establece `NEXT_PUBLIC_APP_URL` como Site URL y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
-3. En Resend, verifica el dominio remitente. En Supabase, configura el SMTP personalizado con el host `smtp.resend.com`, puerto `465` (SSL), usuario `resend` y una API key de Resend como contraseña. Usa un remitente perteneciente al dominio verificado.
-4. Configura las plantillas de confirmación y recuperación de Supabase para usar el enlace de confirmación de Supabase (`{{ .ConfirmationURL }}`); comprueba que la URL de redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
-5. Configura en `.env` las claves públicas de Supabase, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
-6. Ejecuta las migraciones y reinicia la aplicación.
+3. Configura las plantillas de confirmación y recuperación para usar `{{ .ConfirmationURL }}`; comprueba que la redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
+4. Supabase incluye envío de correo para Auth, pero su SMTP predeterminado tiene límites de entrega y está pensado para pruebas. Para producción, revisa los límites vigentes de Supabase y configura un SMTP personalizado si necesitas entrega confiable; eso requiere un proveedor externo y un remitente autorizado.
 
-Supabase Auth envía confirmaciones y recuperación por su SMTP configurado; los avisos transaccionales de solicitudes, decisiones, visitas, evaluaciones, documentos, moderación y reportes se envían por la API de Resend. Si una preferencia está desactivada, ese aviso no se envía. Los fallos quedan registrados como `fallida_email` y se reportan explícitamente; actualmente no hay una pantalla o proceso automático de reintento.
+Los correos de confirmación y recuperación los envía Supabase Auth. Los eventos operativos (solicitudes, visitas, evaluaciones, documentos, moderación y reportes) se guardan como notificaciones dentro de Rentify y se muestran en el dashboard; no se envían por correo. Las preferencias previas de notificación por email ya no aplican.
 
 Las cuentas previas de Rentify se pueden vincular al iniciar sesión si su contraseña heredada es válida y su correo todavía no tiene una identidad incompatible en Supabase. La primera vinculación requiere confirmar el correo. Si Supabase ya tiene una identidad para ese correo, usa el flujo de recuperación de Supabase antes de volver a iniciar sesión.
 
@@ -350,7 +344,7 @@ rentify/
     ├── components/             Componentes reutilizables de interfaz
     ├── lib/
     │   ├── auth.ts             Usuario autenticado y perfil Rentify
-    │   ├── email.ts            Notificaciones de Resend
+    │   ├── notificaciones.ts   Registro de notificaciones dentro de la aplicación
     │   ├── password.ts         Hash y verificación de contraseñas
     │   ├── prisma.ts           Cliente de base de datos
     │   ├── supabase-client.ts  Cliente Supabase Storage

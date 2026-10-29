@@ -2,11 +2,9 @@
 
 import { useActionState, useState } from 'react'
 import { User, Lock, Bell } from 'lucide-react'
-import type { Prisma } from '@prisma/client'
 import {
   actualizarPerfilAction,
   cambiarContrasenaAction,
-  actualizarPreferenciasAction,
   PerfilState,
 } from '@/app/actions/perfil'
 import ReferenciasSection from '@/components/perfil/ReferenciasSection'
@@ -19,7 +17,6 @@ interface Props {
     apellido: string
     telefono: string | null
     foto_perfil: string | null
-    preferencias_email: Prisma.JsonValue | null
   }
   referencias: {
     id: number
@@ -52,7 +49,7 @@ export default function PerfilTabs({ usuario, referencias }: Props) {
           <TabDatos usuario={usuario} referencias={referencias} />
         )}
         {tab === 'seguridad' && <TabSeguridad />}
-        {tab === 'preferencias' && <TabPreferencias usuario={usuario} />}
+        {tab === 'preferencias' && <TabPreferencias />}
       </div>
     </div>
   )
@@ -137,37 +134,17 @@ function TabSeguridad() {
   )
 }
 
-function TabPreferencias({ usuario }: Pick<Props, 'usuario'>) {
-  const [state, formAction, isPending] = useActionState(actualizarPreferenciasAction, initialState)
-  const preferencias = usuario.preferencias_email
-  const prefs =
-    preferencias && typeof preferencias === 'object' && !Array.isArray(preferencias)
-      ? preferencias
-      : {}
-
+function TabPreferencias() {
   return (
-    <form action={formAction} className="space-y-4">
+    <div className="space-y-3">
       <p className="text-sm text-gray-600 mb-4">
-        Elige qué emails quieres recibir de Rentify.
+        Rentify guarda tus avisos de solicitudes, visitas, evaluaciones y cuenta en la sección de notificaciones del dashboard.
       </p>
-
-      <Checkbox name="solicitudes" defaultChecked={prefs.solicitudes !== false} label="Solicitudes de renta" description="Cuando alguien solicite una de tus propiedades o cuando actualicen tu solicitud" />
-      <Checkbox name="visitas" defaultChecked={prefs.visitas !== false} label="Visitas agendadas" description="Recordatorios de visitas presenciales o virtuales" />
-      <Checkbox name="evaluaciones" defaultChecked={prefs.evaluaciones !== false} label="Evaluaciones" description="Cuando recibas una calificación" />
-      <Checkbox name="cuenta" defaultChecked={prefs.cuenta !== false} label="Cuenta y verificaciones" description="Avisos de seguridad, documentos y moderación" />
-      <Checkbox name="marketing" defaultChecked={prefs.marketing === true} label="Novedades y marketing" description="Consejos, propiedades destacadas y promociones" />
-
-      {state?.error && <Alert type="error">{state.error}</Alert>}
-      {state?.success && <Alert type="success">{state.mensaje}</Alert>}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="bg-[#3A4D39] text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition font-medium disabled:opacity-50"
-      >
-        {isPending ? 'Guardando...' : 'Guardar preferencias'}
-      </button>
-    </form>
+      <p className="text-sm text-gray-600">
+        Los correos de confirmación de cuenta y recuperación de contraseña los gestiona Supabase Auth.
+        Los avisos operativos no se envían por correo.
+      </p>
+    </div>
   )
 }
 
@@ -201,23 +178,6 @@ function Field({
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
       />
     </div>
-  )
-}
-
-function Checkbox({ name, defaultChecked, label, description }: { name: string; defaultChecked: boolean; label: string; description: string }) {
-  return (
-    <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
-      <input
-        type="checkbox"
-        name={name}
-        defaultChecked={defaultChecked}
-        className="mt-1 w-4 h-4 accent-[#3A4D39]"
-      />
-      <div>
-        <p className="font-medium text-[#1F1F1F] text-sm">{label}</p>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
-    </label>
   )
 }
 

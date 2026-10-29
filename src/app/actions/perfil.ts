@@ -99,35 +99,6 @@ export async function cambiarContrasenaAction(
   }
 }
 
-export async function actualizarPreferenciasAction(
-  prevState: PerfilState,
-  formData: FormData
-): Promise<PerfilState> {
-  const usuario = await getCurrentUser()
-  if (!usuario) return { error: 'No autorizado' }
-
-  const preferencias = {
-    solicitudes: formData.get('solicitudes') === 'on',
-    visitas: formData.get('visitas') === 'on',
-    evaluaciones: formData.get('evaluaciones') === 'on',
-    cuenta: formData.get('cuenta') === 'on',
-    marketing: formData.get('marketing') === 'on',
-  }
-
-  try {
-    await prisma.usuario.update({
-      where: { id: usuario.id },
-      data: { preferencias_email: preferencias },
-    })
-
-    revalidatePath('/perfil')
-    return { success: true, mensaje: 'Preferencias guardadas' }
-  } catch (error) {
-    console.error('Error actualizar preferencias:', error)
-    return { error: 'Error al guardar las preferencias' }
-  }
-}
-
 export async function subirDocumentoAction(
   prevState: PerfilState,
   formData: FormData

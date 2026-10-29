@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 
 export interface EditarInmuebleState {
   error?: string
@@ -232,12 +232,10 @@ export async function cambiarEstadoInmuebleAction(formData: FormData) {
     }
     await Promise.all(
       [...new Set(solicitudes.map(({ inquilino_id }) => inquilino_id))].map((inquilinoId) =>
-        notificarPorCorreo({
+        registrarNotificacion({
           usuarioId: inquilinoId,
           tipo: 'estado_inmueble_actualizado',
-          asunto: 'Actualización del estado de una propiedad',
           mensaje: `El inmueble "${inmueble.tipo_inmueble}" cambió al estado ${etiquetasEstado[nuevo_estado]}.`,
-          preferencia: 'solicitudes',
         })
       )
     )

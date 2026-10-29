@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 
 export interface ReporteState {
   error?: string
@@ -73,20 +73,16 @@ export async function crearReporteAction(
     })
 
     for (const admin of admins) {
-      await notificarPorCorreo({
+      await registrarNotificacion({
         usuarioId: admin.usuario_id,
         tipo: 'reporte_nuevo',
-        asunto: 'Nuevo reporte de publicación',
         mensaje: `Se recibió un reporte en "${publicacion.inmueble.tipo_inmueble}": ${motivo}.`,
-        preferencia: 'cuenta',
       })
     }
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: usuario.id,
       tipo: 'reporte_recibido',
-      asunto: 'Recibimos tu reporte',
       mensaje: 'El equipo de Rentify revisará la publicación que reportaste.',
-      preferencia: 'cuenta',
     })
 
     revalidatePath(`/propiedad/${publicacion_id}`)

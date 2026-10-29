@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { notificarPorCorreo } from '@/lib/email'
+import { registrarNotificacion } from '@/lib/notificaciones'
 import {
   horaDisponible,
   parsearDisponibilidadVisitas,
@@ -151,21 +151,17 @@ export async function agendarVisitaAction(
       },
     })
 
-    // 5. Notificar al propietario
+    // Notificar en la aplicación a ambas partes de la visita.
     const mensajeVisita = `${usuario.nombre} ${usuario.apellido} agendó una visita ${modalidad} para "${publicacion.inmueble.tipo_inmueble}" el ${fechaHora.toLocaleDateString('es-MX')} a las ${hora}.`
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: publicacion.inmueble.propietario_id,
       tipo: 'visita_agendada',
-      asunto: 'Nueva visita agendada',
       mensaje: mensajeVisita,
-      preferencia: 'visitas',
     })
-    await notificarPorCorreo({
+    await registrarNotificacion({
       usuarioId: usuario.id,
       tipo: 'visita_confirmada',
-      asunto: 'Tu visita quedó agendada',
       mensaje: `Tu visita ${modalidad} para "${publicacion.inmueble.tipo_inmueble}" quedó agendada para el ${fechaHora.toLocaleDateString('es-MX')} a las ${hora}.`,
-      preferencia: 'visitas',
     })
 
     revalidatePath('/dashboard')
@@ -221,12 +217,10 @@ export async function cancelarVisitaAction(formData: FormData) {
   })
   if (resultado.count !== 1) throw new Error('La visita ya fue actualizada.')
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: usuario.id === propietarioId ? inquilinoId : propietarioId,
     tipo: 'visita_cancelada',
-    asunto: 'Una visita fue cancelada',
     mensaje: `La visita de "${visita.solicitud.publicacion.inmueble.tipo_inmueble}" fue cancelada. Motivo: ${motivo}`,
-    preferencia: 'visitas',
   })
   revalidatePath('/dashboard')
 }
@@ -262,12 +256,10 @@ export async function completarVisitaAction(formData: FormData) {
   })
   if (resultado.count !== 1) throw new Error('La visita ya fue actualizada.')
 
-  await notificarPorCorreo({
+  await registrarNotificacion({
     usuarioId: visita.solicitud.inquilino_id,
     tipo: 'visita_completada',
-    asunto: 'La visita fue marcada como completada',
     mensaje: `La visita a "${visita.solicitud.publicacion.inmueble.tipo_inmueble}" fue marcada como completada.`,
-    preferencia: 'visitas',
   })
   revalidatePath('/dashboard')
 }

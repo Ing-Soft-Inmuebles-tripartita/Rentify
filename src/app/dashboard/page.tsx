@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Calendar,
   Star,
+  Bell,
   Pencil,
   Trash2,
 } from 'lucide-react'
@@ -24,6 +25,13 @@ import DisponibilidadVisitasForm from './DisponibilidadVisitasForm'
 async function DashboardContent() {
   const usuario = await getCurrentUser()
   if (!usuario) return null
+
+  const misNotificaciones = await prisma.notificacion.findMany({
+    where: { usuario_id: usuario.id },
+    select: { id: true, tipo: true, mensaje: true, fecha_creacion: true, estado: true },
+    orderBy: { fecha_creacion: 'desc' },
+    take: 5,
+  })
 
   const misSolicitudes = usuario.inquilino
     ? await prisma.solicitudRenta.findMany({
@@ -243,6 +251,26 @@ async function DashboardContent() {
           </div>
         </Link>
       </div>
+
+      <section aria-labelledby="notificaciones-heading" className="rounded-xl bg-white p-5 shadow-sm">
+        <h2 id="notificaciones-heading" className="mb-3 flex items-center gap-2 text-lg font-bold text-primary">
+          <Bell size={20} /> Notificaciones recientes
+        </h2>
+        {misNotificaciones.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">Aún no tienes notificaciones.</p>
+        ) : (
+          <ul className="space-y-3">
+            {misNotificaciones.map((notificacion) => (
+              <li key={notificacion.id} className="border-b border-surface-container pb-3 last:border-0 last:pb-0">
+                <p className="text-sm text-on-surface">{notificacion.mensaje}</p>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  {new Date(notificacion.fecha_creacion).toLocaleString('es-MX')} · {notificacion.estado === 'no_leida' ? 'No leída' : notificacion.estado}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Panel Admin */}
       {usuario.administrador && (
