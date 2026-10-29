@@ -1,3 +1,4 @@
+// Purpose: Proporciona las entidades federativas permitidas en el registro.
 export const ESTADOS_MEXICO = [
   'Aguascalientes',
   'Baja California',

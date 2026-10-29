@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /propiedades.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Search } from 'lucide-react'

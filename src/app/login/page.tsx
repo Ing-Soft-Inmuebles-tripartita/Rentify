@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /login.
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'

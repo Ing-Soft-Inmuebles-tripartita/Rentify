@@ -1,3 +1,4 @@
+// Purpose: Carga y presenta detalle, reputacion, ubicacion y acciones del anuncio.
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import {
@@ -86,7 +87,13 @@ export default async function PropiedadContent({ params }: Props) {
     },
   })
 
-  if (!publicacion) notFound()
+  if (
+    !publicacion ||
+    publicacion.estado !== 'activa' ||
+    publicacion.inmueble.estado_inventario !== 'disponible'
+  ) {
+    notFound()
+  }
 
   const evaluacionesInmueble = await prisma.evaluacion.findMany({
     where: {

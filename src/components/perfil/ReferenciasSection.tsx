@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Permite consultar y administrar referencias personales de renta.
 'use client'
 
 import { useActionState } from 'react'

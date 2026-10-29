@@ -1,3 +1,4 @@
+// Purpose: Presenta la pagina para rutas o recursos que no existen.
 import Link from 'next/link'
 import { Home, Search } from 'lucide-react'
 

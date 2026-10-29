@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Muestra inmuebles del catalogo en un mapa con enlaces a sus fichas.
 'use client'
 
 import { useEffect, useState } from 'react'

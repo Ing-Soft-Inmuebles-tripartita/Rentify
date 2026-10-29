@@ -1,3 +1,4 @@
+-- Purpose: Agrega metadatos y relaciones para moderacion y administracion.
 -- AlterTable
 ALTER TABLE "Publicacion" ADD COLUMN     "fecha_suspension" TIMESTAMP(3),
 ADD COLUMN     "motivo_suspension" TEXT,

@@ -1,3 +1,4 @@
+// Purpose: Muestra el limite de error de Next.js y permite reintentar el renderizado.
 'use client'
 
 import { useEffect } from 'react'

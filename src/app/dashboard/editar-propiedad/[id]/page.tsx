@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /dashboard/editar-propiedad/:id.
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'

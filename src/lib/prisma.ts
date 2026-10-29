@@ -1,3 +1,4 @@
+// Purpose: Comparte el cliente Prisma y evita instancias duplicadas en desarrollo.
 import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {

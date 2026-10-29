@@ -1,3 +1,4 @@
+// Purpose: Registra avisos operativos en Rentify sin enviar correo.
 import 'server-only'
 import { prisma } from '@/lib/prisma'
 

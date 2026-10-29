@@ -1,3 +1,4 @@
+// Purpose: Resume una solicitud recibida y el historial de su solicitante.
 'use client'
 
 import Image from 'next/image'

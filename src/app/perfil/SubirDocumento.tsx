@@ -1,3 +1,4 @@
+// Purpose: Sube archivos privados y registra su ruta para revision.
 'use client'
 
 import { useState } from 'react'

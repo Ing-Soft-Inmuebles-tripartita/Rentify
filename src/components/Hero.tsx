@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Presenta la portada y dirige la busqueda rapida al catalogo.
 'use client'
 
 import { useState } from 'react'

@@ -1,3 +1,4 @@
+// Purpose: Crea el cliente Supabase del navegador para Auth y Storage.
 import { createBrowserClient } from '@supabase/ssr'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL

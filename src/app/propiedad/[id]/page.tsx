@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /propiedad/:id.
 export const instant = false
 
 import { Suspense } from 'react'

@@ -1,3 +1,4 @@
+-- Purpose: Crea el esquema inicial de usuarios, inmuebles, publicaciones y operaciones de renta.
 -- CreateTable
 CREATE TABLE "Usuario" (
     "id" SERIAL NOT NULL,

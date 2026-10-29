@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Renderiza con Leaflet la ubicacion aproximada de una propiedad.
 'use client'
 
 import { useEffect, useState } from 'react'

@@ -1,3 +1,4 @@
+// Purpose: Abre el flujo de reporte desde la ficha de propiedad.
 'use client'
 
 import { useActionState, useState } from 'react'

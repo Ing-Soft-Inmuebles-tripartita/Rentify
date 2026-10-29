@@ -1,3 +1,4 @@
+// Purpose: Implementa la interfaz y logica de restablecer form.
 'use client'
 
 import { useActionState } from 'react'

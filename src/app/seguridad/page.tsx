@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /seguridad.
 import Link from 'next/link'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
 

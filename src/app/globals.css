@@ -1,3 +1,4 @@
+/* Purpose: Define estilos globales, tokens de color y estilos base de la aplicacion. */
 @import 'leaflet/dist/leaflet.css';
 @import "tailwindcss";
 

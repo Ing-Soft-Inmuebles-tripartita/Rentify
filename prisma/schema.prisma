@@ -1,3 +1,4 @@
+// Purpose: Define los modelos PostgreSQL, relaciones, indices y conexiones de Prisma.
 generator client {
   provider = "prisma-client-js"
 }

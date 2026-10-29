@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Renderiza la navegacion global segun el estado de autenticacion.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { LayoutDashboard, LogOut, Settings, HelpCircle } from 'lucide-react'

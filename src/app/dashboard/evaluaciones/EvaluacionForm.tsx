@@ -1,3 +1,4 @@
+// Purpose: Captura una calificacion y comentario de una renta finalizada.
 'use client'
 
 import { useActionState, useState } from 'react'

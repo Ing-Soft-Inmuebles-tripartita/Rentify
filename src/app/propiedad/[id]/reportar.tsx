@@ -1,3 +1,4 @@
+// Purpose: Define el formulario y el estado de envio de un reporte de anuncio.
 'use client'
 
 import { useActionState, useState } from 'react'

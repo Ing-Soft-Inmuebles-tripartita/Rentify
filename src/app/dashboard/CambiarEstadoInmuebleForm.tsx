@@ -1,5 +1,7 @@
+// Purpose: Presenta el formulario de estado del inventario de un inmueble.
 'use client'
 
+import { useActionState } from 'react'
 import { cambiarEstadoInmuebleAction } from '@/app/actions/inmuebles'
 
 const ESTADOS = [
@@ -18,17 +20,23 @@ export default function CambiarEstadoInmuebleForm({
   inmuebleId,
   estadoActual,
 }: Props) {
+  const [actionState, formAction, isPending] = useActionState(
+    cambiarEstadoInmuebleAction,
+    { estado: estadoActual }
+  )
+  const estadoSeleccionado = actionState.estado || estadoActual
+
   const color =
-    estadoActual === 'disponible'
+    estadoSeleccionado === 'disponible'
       ? 'bg-green-100 text-green-700'
-      : estadoActual === 'en_negociacion'
+      : estadoSeleccionado === 'en_negociacion'
       ? 'bg-yellow-100 text-yellow-700'
-      : estadoActual === 'rentado'
+      : estadoSeleccionado === 'rentado'
       ? 'bg-blue-100 text-blue-700'
       : 'bg-gray-100 text-gray-700'
 
   return (
-    <form action={cambiarEstadoInmuebleAction} className="mt-3">
+    <form action={formAction} className="mt-3">
       <input type="hidden" name="inmueble_id" value={inmuebleId} />
       <label className="sr-only" htmlFor={`estado-inmueble-${inmuebleId}`}>
         Estado del inmueble
@@ -36,7 +44,8 @@ export default function CambiarEstadoInmuebleForm({
       <select
         id={`estado-inmueble-${inmuebleId}`}
         name="estado"
-        defaultValue={estadoActual}
+        value={estadoSeleccionado}
+        disabled={isPending}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
         className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer border-0 ${color}`}
       >
@@ -46,6 +55,14 @@ export default function CambiarEstadoInmuebleForm({
           </option>
         ))}
       </select>
+      {isPending && (
+        <p className="mt-1 text-xs text-on-surface-variant">Guardando estado...</p>
+      )}
+      {actionState.error && (
+        <p role="alert" className="mt-1 text-xs text-red-600">
+          {actionState.error}
+        </p>
+      )}
     </form>
   )
 }

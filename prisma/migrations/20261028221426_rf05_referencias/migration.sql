@@ -1,3 +1,4 @@
+-- Purpose: Agrega referencias de renta asociadas a perfiles de inquilino.
 -- CreateTable
 CREATE TABLE "ReferenciaRenta" (
     "id" SERIAL NOT NULL,

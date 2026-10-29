@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /dashboard.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -72,7 +73,10 @@ async function DashboardContent() {
 
   const misInmuebles = usuario.propietario
     ? await prisma.inmueble.findMany({
-        where: { propietario_id: usuario.propietario.usuario_id },
+        where: {
+          propietario_id: usuario.propietario.usuario_id,
+          publicaciones: { none: { estado: 'eliminada' } },
+        },
         include: {
           publicaciones: {
             include: {

@@ -1,3 +1,4 @@
+// Purpose: Actualiza cookies de Supabase y redirige visitantes sin sesion desde rutas protegidas.
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 

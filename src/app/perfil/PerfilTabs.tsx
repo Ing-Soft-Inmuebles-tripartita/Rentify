@@ -1,3 +1,4 @@
+// Purpose: Organiza datos personales, seguridad y referencias del perfil.
 'use client'
 
 import { useActionState, useState } from 'react'

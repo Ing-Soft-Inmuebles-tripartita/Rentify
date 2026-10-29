@@ -1,3 +1,4 @@
+// Purpose: Valida la disponibilidad semanal guardada para fecha y hora de visita.
 export interface FranjaDisponibilidad {
   dia_semana: number
   hora_inicio: string

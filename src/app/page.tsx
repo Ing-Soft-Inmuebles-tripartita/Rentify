@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -10,7 +11,10 @@ async function PropiedadesDestacadas() {
   // La página inicial muestra solo publicaciones activas y una foto de portada por inmueble.
   const publicaciones = await prisma.publicacion.findMany({
     take: 6,
-    where: { estado: 'activa' },
+    where: {
+      estado: 'activa',
+      inmueble: { is: { estado_inventario: 'disponible' } },
+    },
     include: {
       inmueble: { include: { propietario: true } },
       fotos: { orderBy: { orden: 'asc' }, take: 1 },

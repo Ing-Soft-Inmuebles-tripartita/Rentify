@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Despliega reputacion, verificacion, referencias y rentas previas.
 'use client'
 
 import { useState } from 'react'

@@ -1,3 +1,4 @@
+// Purpose: Permite agendar visitas y presenta estados y validaciones del flujo.
 // src/app/propiedad/[id]/SolicitarRentaButton.tsx
 'use client'
 

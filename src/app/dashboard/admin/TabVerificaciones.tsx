@@ -1,3 +1,4 @@
+// Purpose: Presenta documentos privados para revision administrativa.
 'use client'
 
 import { useState } from 'react'

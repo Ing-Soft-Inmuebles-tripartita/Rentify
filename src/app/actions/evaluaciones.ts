@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Valida evaluaciones de rentas finalizadas y recalcula promedios.
 'use server'
 
 import { revalidatePath } from 'next/cache'

@@ -1,3 +1,4 @@
+// Purpose: Centraliza hash y verificacion de contrasenas heredadas con bcrypt.
 import bcrypt from 'bcryptjs'
 
 export async function hashPassword(password: string): Promise<string> {

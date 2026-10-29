@@ -1,3 +1,4 @@
+// Purpose: Puebla una base de desarrollo con fixtures y elimina antes los datos existentes.
 import { PrismaClient } from '@prisma/client'
 import { hashPassword } from '../src/lib/password'
 

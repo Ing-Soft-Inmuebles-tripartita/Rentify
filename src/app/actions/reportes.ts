@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Valida reportes de anuncios y registra avisos internos.
 'use server'
 
 import { revalidatePath } from 'next/cache'

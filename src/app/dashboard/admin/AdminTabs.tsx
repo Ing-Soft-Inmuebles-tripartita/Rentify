@@ -1,3 +1,4 @@
+// Purpose: Organiza las secciones del panel de administracion.
 'use client'
 
 import { useState } from 'react'

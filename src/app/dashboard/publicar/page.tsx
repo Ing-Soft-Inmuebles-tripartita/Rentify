@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /dashboard/publicar.
 'use client'
 
 import Image from 'next/image'

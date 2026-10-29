@@ -1,3 +1,4 @@
+// Purpose: Resuelve la sesion de Supabase y la asocia con perfiles y roles de Prisma.
 import { prisma } from './prisma'
 import { createSupabaseServerClient } from './supabase-server'
 

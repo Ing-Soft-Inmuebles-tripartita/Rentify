@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Agenda y actualiza visitas validando permisos, disponibilidad y conflictos.
 // src/app/actions/visitas.ts
 'use server'
 

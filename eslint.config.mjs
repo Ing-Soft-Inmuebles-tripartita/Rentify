@@ -1,3 +1,4 @@
+// Propósito: Combina las reglas recomendadas de Next.js, Core Web Vitals y TypeScript.
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";

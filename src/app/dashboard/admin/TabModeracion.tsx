@@ -1,3 +1,4 @@
+// Purpose: Lista publicaciones para las acciones de moderacion administrativa.
 'use client'
 
 import Image from 'next/image'

@@ -1,3 +1,4 @@
+// Purpose: Permite configurar los dias y horario semanal de visitas.
 import { guardarDisponibilidadVisitasAction } from '@/app/actions/visitas'
 import { parsearDisponibilidadVisitas } from '@/lib/disponibilidad-visitas'
 

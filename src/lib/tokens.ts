@@ -1,3 +1,4 @@
+// Purpose: Genera tokens aleatorios y huellas criptograficas para enlaces de un solo uso.
 import { randomBytes, createHash } from 'crypto'
 
 export function generarToken(): string {

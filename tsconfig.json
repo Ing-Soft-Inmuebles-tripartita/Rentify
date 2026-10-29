@@ -1,3 +1,4 @@
+// Propósito: Configura el análisis estricto de TypeScript y el alias de módulos de src/.
 {
   "compilerOptions": {
     "target": "ES2017",

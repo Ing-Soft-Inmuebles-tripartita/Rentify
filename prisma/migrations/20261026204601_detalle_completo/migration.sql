@@ -1,3 +1,4 @@
+-- Purpose: Agrega campos y relaciones del detalle de inmuebles.
 -- AlterTable
 ALTER TABLE "Inmueble" ADD COLUMN     "mantenimiento_incluido" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN     "piso" INTEGER DEFAULT 1,

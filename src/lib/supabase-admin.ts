@@ -1,3 +1,4 @@
+// Purpose: Crea el cliente Supabase privilegiado para operaciones solo de servidor.
 import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 

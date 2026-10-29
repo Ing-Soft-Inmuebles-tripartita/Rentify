@@ -1,3 +1,4 @@
+// Purpose: Permite editar los datos de un inmueble y su publicacion.
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'

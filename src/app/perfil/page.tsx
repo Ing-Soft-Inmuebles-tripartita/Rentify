@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /perfil.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'

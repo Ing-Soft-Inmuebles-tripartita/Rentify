@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Modera publicaciones, revisa documentos, resuelve reportes y administra cuentas.
 'use server'
 
 import { revalidatePath } from 'next/cache'

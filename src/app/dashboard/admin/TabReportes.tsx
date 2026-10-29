@@ -1,3 +1,4 @@
+// Purpose: Presenta reportes y controles para resolverlos.
 'use client'
 
 import { useState } from 'react'

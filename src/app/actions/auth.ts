@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Gestiona registro, sesiones, recuperacion y vinculacion de identidades Supabase.
 'use server'
 
 import { redirect } from 'next/navigation'

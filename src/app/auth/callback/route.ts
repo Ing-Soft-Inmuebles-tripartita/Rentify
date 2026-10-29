@@ -1,3 +1,4 @@
+// Purpose: Valida el callback de Supabase Auth, vincula el perfil y controla la redireccion.
 import { NextResponse, type NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { prisma } from '@/lib/prisma'

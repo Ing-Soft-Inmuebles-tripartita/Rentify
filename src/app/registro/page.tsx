@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /registro.
 'use client'
 
 import { useActionState } from 'react'

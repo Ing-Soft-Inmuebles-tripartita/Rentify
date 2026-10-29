@@ -1,3 +1,4 @@
+// Purpose: Captura credenciales y presenta el resultado del inicio de sesion.
 'use client'
 
 import Image from 'next/image'

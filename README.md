@@ -15,6 +15,7 @@ Rentify es una aplicación web académica para descubrir y administrar inmuebles
 - [Requisitos](#requisitos)
 - [Configuración local](#configuración-local)
 - [Variables de entorno](#variables-de-entorno)
+- [Despliegue en Vercel](#despliegue-en-vercel)
 - [Base de datos y datos de demostración](#base-de-datos-y-datos-de-demostración)
 - [Supabase Storage y documentos](#supabase-storage-y-documentos)
 - [Cuentas de demostración](#cuentas-de-demostración)
@@ -43,24 +44,27 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 ### Exploración de inmuebles
 
 - Página principal con acceso al catálogo.
-- Listado y filtrado por ubicación, tipo de inmueble, presupuesto y número de habitaciones.
+- Filtros de catálogo por ubicación, tipo, precio mínimo/máximo, habitaciones, baños, amenidades y reglas de mascotas/niños.
+- Ordenamiento y vistas de catálogo en cuadrícula, lista y mapa.
 - Página de detalle con fotografías, descripción, renta, depósito, reglas, amenidades, condiciones y ubicación en mapa cuando hay coordenadas.
-- Calificaciones de inmuebles basadas en experiencias de renta finalizadas.
+- Calificaciones de inmuebles basadas en evaluaciones de experiencias de renta finalizadas.
 - Opción para reportar una publicación.
 
 ### Cuentas y perfil
 
 - Registro, inicio y cierre de sesión.
-- El registro solicita teléfono y estado de residencia; la foto de perfil se puede agregar mediante una URL pública.
+- El registro solicita teléfono y estado de residencia; la foto de perfil es opcional y se agrega mediante una URL.
 - Restablecimiento de contraseña mediante un enlace temporal.
-- Edición de datos de perfil y cambio de contraseña.
+- Edición de datos de perfil, cambio de contraseña y gestión de referencias de renta.
 - Roles independientes de propietario e inquilino: una cuenta puede tener ambos perfiles.
 - Carga y seguimiento de documentos para revisión administrativa.
+- Notificaciones operativas internas visibles en el dashboard; no se envían por correo.
 
 ### Publicación y renta
 
 - Creación y edición de inmuebles y sus publicaciones.
 - Administración de precio de renta, depósito, descripción, reglas, fotografías, amenidades, servicios y plazo mínimo.
+- Cambio del estado de inventario entre disponible, en negociación, rentado y pausado. El borrado retira la publicación del catálogo y del dashboard, conservando los registros relacionados.
 - Solicitudes de renta que el propietario puede revisar, aprobar o rechazar.
 - Agendamiento de visitas con fecha, hora y modalidad; los propietarios configuran los días y el horario semanal de cada inmueble.
 - Dashboard con la actividad de las cuentas, propiedades y solicitudes.
@@ -79,7 +83,7 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 | Rol/perfil | Responsabilidades principales |
 | --- | --- |
 | Visitante | Explorar las páginas públicas y consultar propiedades. |
-| Usuario registrado | Administrar su perfil, preferencias y documentos; enviar solicitudes y agendar visitas. |
+| Usuario registrado | Administrar su perfil y documentos; consultar notificaciones internas, enviar solicitudes y agendar visitas. |
 | Inquilino | Gestionar solicitudes de renta y participar en visitas y evaluaciones asociadas a una renta. |
 | Propietario | Publicar y administrar sus inmuebles y atender solicitudes recibidas. |
 | Administrador | Moderar publicaciones, verificar documentos, atender reportes y gestionar bloqueos de usuarios. |
@@ -100,15 +104,16 @@ Las rutas `/dashboard` y `/perfil` requieren sesión. La administración no depe
 | `/registro` | Registro de cuenta. |
 | `/recuperar` | Solicitud de recuperación de contraseña. |
 | `/restablecer` | Formulario para establecer una contraseña nueva desde el enlace de Supabase Auth. |
+| `/restablecer/[token]` | Ruta heredada que redirige a `/recuperar`; el flujo vigente usa `/restablecer`. |
 | `/seguridad` | Información de seguridad. |
-| `/perfil` | Datos, preferencias y documentos de la cuenta autenticada. |
+| `/perfil` | Datos, seguridad, referencias y documentos de la cuenta autenticada. |
 | `/dashboard` | Panel principal de usuario; cambia según su información y roles. |
 | `/dashboard/publicar` | Formulario para publicar un inmueble. |
 | `/dashboard/editar-propiedad/[id]` | Edición de una propiedad propia. |
 | `/dashboard/evaluaciones` | Evaluaciones relacionadas con la experiencia de renta. |
 | `/dashboard/admin` | Panel administrativo. |
 
-La interfaz está en español. Las rutas dinámicas usan el identificador de la publicación, propiedad o token correspondiente.
+La interfaz está en español. Las rutas dinámicas usan el identificador de la publicación, inmueble o token correspondiente.
 
 ## Tecnologías y arquitectura
 
@@ -133,7 +138,10 @@ La interfaz está en español. Las rutas dinámicas usan el identificador de la 
 - Las operaciones que cambian datos se agrupan como Server Actions en `src/app/actions`.
 - `src/lib/auth.ts` valida la sesión con Supabase y vincula la identidad autenticada con el perfil Prisma.
 - `src/lib/supabase-server.ts` y `src/lib/supabase-client.ts` crean clientes Supabase con cookies SSR.
+- `src/lib/supabase-admin.ts` limita las operaciones privilegiadas de Storage al servidor.
 - `src/lib/prisma.ts` comparte el cliente de Prisma durante el desarrollo para reducir conexiones durante las recargas.
+- `src/lib/disponibilidad-visitas.ts` valida disponibilidad y conflictos de agenda; `src/lib/notificaciones.ts` registra avisos internos.
+- `src/lib/estados-mexico.ts` centraliza los estados disponibles para el registro.
 - `src/proxy.ts` actualiza las cookies y protege rutas privadas; cada Server Action vuelve a comprobar la identidad y los permisos.
 - Las mutaciones revalidan las rutas afectadas para refrescar el contenido del dashboard y de las páginas públicas.
 
@@ -143,7 +151,7 @@ El esquema está en [`prisma/schema.prisma`](./prisma/schema.prisma). Sus entida
 
 | Área | Modelos | Descripción |
 | --- | --- | --- |
-| Cuentas y roles | `Usuario`, `Propietario`, `Inquilino`, `Administrador` | Identidad, estado, datos de cuenta y perfiles/roles asociados. |
+| Cuentas y roles | `Usuario`, `Propietario`, `Inquilino`, `Administrador`, `ReferenciaRenta` | Identidad, estado, datos de cuenta, perfiles y referencias de renta. |
 | Inmuebles y publicaciones | `Inmueble`, `Publicacion`, `Foto`, `Caracteristica`, `InmuebleCaracteristica`, `Resena` | Datos físicos del inmueble, anuncio, imágenes, amenidades y reseñas. |
 | Documentos | `Documento`, `Verificacion` | Archivos enviados y decisiones de revisión administrativa. |
 | Solicitudes y visitas | `SolicitudRenta`, `Visita`, `ExperienciaRenta`, `Evaluacion` | Solicitud, agenda de visitas y evaluaciones vinculadas a una experiencia de renta. |
@@ -156,7 +164,7 @@ Los estados de roles, publicaciones, solicitudes y documentos se guardan como ca
 - Node.js 20.9 o posterior.
 - npm.
 - PostgreSQL accesible desde la aplicación.
-- Proyecto de Supabase para Storage.
+- Proyecto de Supabase para Auth y Storage.
 - Conexión a Internet para acceder a las dependencias, recursos externos de imágenes y servicios de Supabase.
 
 ## Configuración local
@@ -176,7 +184,7 @@ Los estados de roles, publicaciones, solicitudes y documentos se guardan como ca
    npm install
    ```
 
-3. Crea un archivo `.env` en la carpeta donde está `package.json`. Configura las variables descritas en [Variables de entorno](#variables-de-entorno). No compartas ni subas ese archivo al repositorio.
+3. Copia `.env.example` a `.env` en la carpeta donde está `package.json` y completa las variables descritas en [Variables de entorno](#variables-de-entorno). No compartas ni subas `.env` al repositorio.
 
 4. Aplica las migraciones existentes en una base local o de desarrollo:
 
@@ -206,7 +214,7 @@ Para comprobar la aplicación antes de desplegar, ejecuta el lint, la comprobaci
 
 ## Variables de entorno
 
-Define estas variables en `.env` en la raíz de la aplicación:
+Define estas variables en `.env` en la raíz de la aplicación. La plantilla sin secretos está en [`.env.example`](./.env.example):
 
 | Variable | Obligatoria | Descripción |
 | --- | --- | --- |
@@ -230,7 +238,18 @@ SUPABASE_SERVICE_ROLE_KEY="CLAVE-PRIVADA-SOLO-SERVIDOR"
 PRISMA_LOG_QUERIES="false"
 ```
 
-Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. No copies credenciales reales a documentación, issues o commits. La clave service role es privada y la clave anon/publishable de Supabase es pública por diseño, pero no sustituye las políticas de acceso.
+Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la URL de pool para `DATABASE_URL` cuando corresponda y una conexión directa para `DIRECT_URL`. Codifica caracteres especiales de la contraseña según el formato de URL. No copies credenciales reales a documentación, issues o commits. La clave service role es privada y la clave anon/publishable de Supabase es pública por diseño, pero no sustituye las políticas de acceso.
+
+## Despliegue en Vercel
+
+1. Importa el repositorio en Vercel y configura **Root Directory** como `rentify`, el directorio que contiene `package.json`.
+2. Agrega en las variables de entorno de Vercel todas las variables marcadas como obligatorias en la tabla anterior. Configúralas para los entornos que vayas a utilizar (Preview y Production); no conectes Preview a una base de producción.
+3. En Supabase Auth, agrega la URL pública final y `https://TU-DOMINIO/auth/callback` a **Site URL** y **Redirect URLs**. Para despliegues de Preview, permite explícitamente las URLs necesarias.
+4. Antes de recibir tráfico con el nuevo esquema, ejecuta `npx prisma migrate deploy` con las variables de base de datos del entorno de destino. Haz una copia de seguridad y revisa el estado de migraciones primero; no ejecutes `migrate dev` en producción.
+5. Despliega desde Vercel. El comando `npm run build` genera el cliente Prisma y después compila Next.js; no aplica migraciones ni ejecuta el seed.
+6. Prueba registro, confirmación, inicio de sesión, recuperación, lectura/escritura autorizada de Storage y una acción operativa.
+
+Mantén `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` y `DIRECT_URL` como secretos del servidor. Nunca publiques `.env`, ejecutes el seed en producción ni expongas documentos reales durante las pruebas.
 
 ## Base de datos y datos de demostración
 
@@ -251,6 +270,8 @@ npx prisma generate
 ```
 
 El seed crea usuarios, perfiles, amenidades, inmuebles, publicaciones, fotos, reseñas y registros de ejemplo para probar solicitudes, visitas, reportes, documentos, notificaciones y experiencias de renta. El script está en [`prisma/seed.ts`](./prisma/seed.ts) y borra primero los registros existentes de las tablas que utiliza.
+
+El seed crea perfiles de Rentify en PostgreSQL, **no identidades de Supabase Auth**. Para iniciar sesión como una cuenta sembrada, crea la identidad correspondiente en **Supabase → Authentication → Users** (por ejemplo, con auto-confirmación en una base de pruebas) usando el mismo correo y contraseña. Al autenticarse, Rentify vincula esa identidad con el perfil existente por correo. Las cuentas y contraseñas conocidas son solo para pruebas locales.
 
 ## Supabase Storage y documentos
 
@@ -295,15 +316,17 @@ Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación
 1. En Supabase, habilita el proveedor de correo/contraseña y exige confirmar la dirección antes de iniciar sesión.
 2. En la configuración de URL de Auth, establece `NEXT_PUBLIC_APP_URL` como Site URL y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
 3. Configura las plantillas de confirmación y recuperación para usar `{{ .ConfirmationURL }}`; comprueba que la redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
-4. Supabase incluye envío de correo para Auth, pero su SMTP predeterminado tiene límites de entrega y está pensado para pruebas. Para producción, revisa los límites vigentes de Supabase y configura un SMTP personalizado si necesitas entrega confiable; eso requiere un proveedor externo y un remitente autorizado.
+4. El proveedor de correo predeterminado de Supabase tiene límites de entrega y es adecuado principalmente para pruebas. Para producción, revisa la documentación y los límites vigentes de Supabase; si necesitas entrega confiable, tendrás que configurar un SMTP externo con un remitente autorizado.
 
 Los correos de confirmación y recuperación los envía Supabase Auth. Los eventos operativos (solicitudes, visitas, evaluaciones, documentos, moderación y reportes) se guardan como notificaciones dentro de Rentify y se muestran en el dashboard; no se envían por correo. Las preferencias previas de notificación por email ya no aplican.
 
-Si el registro falla, revisa el mensaje del formulario y los eventos en **Authentication → Logs**. Un error de límite requiere esperar; un fallo de envío de confirmación requiere revisar la configuración de correo y los límites del SMTP predeterminado. Tras añadir `estado_residencia` al perfil, aplica la nueva migración en la base de desarrollo con `npx prisma migrate deploy` antes de probar registros nuevos.
+Si el registro falla, revisa el mensaje del formulario y los eventos en **Authentication → Logs**. Un error `401` suele significar que Supabase rechazó la clave de API: comprueba que la clave pública vigente pertenezca al mismo proyecto de `NEXT_PUBLIC_SUPABASE_URL`, que no se haya usado `service_role`, y reinicia Next.js después de modificar `.env`. Un error de límite requiere esperar; un fallo de envío de confirmación requiere revisar la configuración y los límites de correo de Supabase. Las migraciones nuevas se aplican con `npx prisma migrate deploy` en la base de pruebas antes de registrar.
 
 Las cuentas previas de Rentify se pueden vincular al iniciar sesión si su contraseña heredada es válida y su correo todavía no tiene una identidad incompatible en Supabase. La primera vinculación requiere confirmar el correo. Si Supabase ya tiene una identidad para ese correo, usa el flujo de recuperación de Supabase antes de volver a iniciar sesión.
 
 Las sesiones y su duración se administran mediante Supabase Auth y cookies SSR; no se necesita configurar un `JWT_SECRET` propio. Un usuario bloqueado no puede entrar a las áreas protegidas ni ejecutar acciones de servidor.
+
+El cliente anon de Storage permite subir únicamente a `documentos/{auth.uid()}/` si se instaló la política indicada arriba. El panel de administración firma accesos privados en servidor con la service role. Mantén el bucket privado y limita su clave a entornos de servidor.
 
 ## Comandos disponibles
 
@@ -330,10 +353,12 @@ rentify/
 │   ├── migrations/             Historial versionado de cambios en PostgreSQL
 │   ├── schema.prisma           Modelos y relaciones de datos
 │   └── seed.ts                 Datos de demostración (borra datos existentes)
+├── .env.example                Plantilla local de variables sin secretos
 ├── public/                     Recursos estáticos
 └── src/
     ├── app/
     │   ├── actions/            Server Actions por dominio
+    │   ├── auth/callback/      Confirmación y recuperación de Supabase Auth
     │   ├── dashboard/          Panel usuario, publicaciones y administración
     │   ├── guia/               Guía de Guadalajara
     │   ├── login/              Inicio de sesión
@@ -352,8 +377,7 @@ rentify/
     │   ├── prisma.ts           Cliente de base de datos
     │   ├── supabase-client.ts  Cliente Supabase Storage
     │   └── tokens.ts           Tokens y expiraciones
-    ├── proxy.ts                Sesión SSR y protección de rutas privadas
-    └── app/auth/callback/      Confirmación y recuperación de Supabase Auth
+    └── proxy.ts                Sesión SSR y protección de rutas privadas
 ```
 
 Las acciones de servidor están separadas por dominio:
@@ -361,7 +385,7 @@ Las acciones de servidor están separadas por dominio:
 | Archivo | Responsabilidad |
 | --- | --- |
 | `src/app/actions/auth.ts` | Registro, login, logout y recuperación de contraseña. |
-| `src/app/actions/perfil.ts` | Perfil, contraseña, preferencias y documentos. |
+| `src/app/actions/perfil.ts` | Perfil, contraseña y documentos. |
 | `src/app/actions/propiedades.ts` | Publicación de inmuebles. |
 | `src/app/actions/inmuebles.ts` | Edición, estado y eliminación de inmuebles. |
 | `src/app/actions/solicitudes.ts` | Solicitudes de renta y decisiones del propietario. |
@@ -374,8 +398,13 @@ Las acciones de servidor están separadas por dominio:
 
 - Es un proyecto académico; antes de usarlo con usuarios o documentos reales se deben revisar seguridad, privacidad, políticas de Storage, manejo de correo y operación de producción.
 - No existe integración de pagos.
-- No se ha probado la entrega real de correos ni los flujos de Supabase con credenciales de despliegue.
+- No se ha probado la entrega real de correos ni todos los flujos de Supabase con credenciales de producción.
 - La confirmación de correo depende de las URL permitidas, SMTP y plantillas configuradas en el proyecto Supabase.
+- Los avisos de actividad se muestran en el dashboard y no se envían por email; no hay mensajería directa ni notificaciones de mensajes.
+- El dashboard muestra un número limitado de notificaciones recientes; no hay una bandeja completa ni una acción para marcar cada aviso como leído.
+- Los horarios de visita son una franja semanal por día de la semana; no existe calendario de excepciones, feriados ni disponibilidad por fecha.
+- La foto de perfil y las fotos de publicaciones se capturan como URLs; solo los documentos de verificación usan Storage privado.
+- Algunos textos promocionales y cifras de portada/inicio de sesión son datos demostrativos estáticos, no métricas calculadas ni garantías operativas. La interfaz incluye textos de confianza que deben revisarse antes de presentarla como servicio real.
 - No se ha configurado una suite de pruebas automatizadas.
 - El seed es destructivo y las cuentas de prueba tienen contraseñas conocidas.
 - El panel de guía contiene actualmente contenido introductorio básico.

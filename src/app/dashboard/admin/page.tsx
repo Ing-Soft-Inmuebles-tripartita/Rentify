@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /dashboard/admin.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'

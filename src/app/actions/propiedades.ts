@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Valida y crea inmuebles, publicaciones, fotografias y caracteristicas.
 'use server'
 
 import { redirect } from 'next/navigation'

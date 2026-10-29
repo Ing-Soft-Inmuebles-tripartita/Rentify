@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Actualiza perfiles y contrasenas y registra documentos privados.
 'use server'
 
 import { revalidatePath } from 'next/cache'

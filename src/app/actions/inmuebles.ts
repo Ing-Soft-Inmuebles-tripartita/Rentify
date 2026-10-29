@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Edita, cambia el estado y elimina inmuebles del propietario autenticado.
 'use server'
 
 import { revalidatePath } from 'next/cache'
@@ -9,6 +10,11 @@ export interface EditarInmuebleState {
   error?: string
   success?: boolean
   mensaje?: string
+}
+
+export interface CambiarEstadoInmuebleState {
+  estado: string
+  error?: string
 }
 
 // ==================== VERIFICAR PROPIETARIO ====================
@@ -195,27 +201,35 @@ export async function editarInmuebleAction(
 }
 
 // ==================== CAMBIAR ESTADO DE INVENTARIO ====================
-export async function cambiarEstadoInmuebleAction(formData: FormData) {
+export async function cambiarEstadoInmuebleAction(
+  previousState: CambiarEstadoInmuebleState,
+  formData: FormData
+): Promise<CambiarEstadoInmuebleState> {
   const inmueble_id = Number(formData.get('inmueble_id'))
   const nuevo_estado = String(formData.get('estado') ?? '')
 
   if (!Number.isInteger(inmueble_id) || inmueble_id <= 0) {
-    throw new Error('ID de inmueble inválido')
+    return { estado: previousState.estado, error: 'ID de inmueble inválido' }
   }
 
   const estadosValidos = ['disponible', 'en_negociacion', 'rentado', 'pausado']
   if (!estadosValidos.includes(nuevo_estado)) {
-    throw new Error('Estado de inmueble inválido')
+    return { estado: previousState.estado, error: 'Estado de inmueble inválido' }
   }
+
+  let estadoGuardado = false
 
   try {
     const { inmueble } = await verificarPropietario(inmueble_id)
-    if (inmueble.estado_inventario === nuevo_estado) return
+    if (inmueble.estado_inventario === nuevo_estado) {
+      return { estado: nuevo_estado }
+    }
 
     await prisma.inmueble.update({
       where: { id: inmueble_id },
       data: { estado_inventario: nuevo_estado },
     })
+    estadoGuardado = true
 
     const solicitudes = await prisma.solicitudRenta.findMany({
       where: {
@@ -242,9 +256,21 @@ export async function cambiarEstadoInmuebleAction(formData: FormData) {
 
     revalidatePath('/dashboard')
     revalidatePath('/propiedades')
+    revalidatePath('/')
+    if (inmueble.publicaciones[0]) {
+      revalidatePath(`/propiedad/${inmueble.publicaciones[0].id}`)
+    }
+    return { estado: nuevo_estado }
   } catch (error) {
     console.error('Error al cambiar estado:', error)
-    throw error
+    return {
+      estado: estadoGuardado ? nuevo_estado : previousState.estado,
+      error: estadoGuardado
+        ? 'El estado se guardó, pero ocurrió un error al completar el proceso.'
+        : error instanceof Error
+          ? error.message
+          : 'No se pudo cambiar el estado del inmueble.',
+    }
   }
 }
 
@@ -257,7 +283,7 @@ export async function eliminarInmuebleAction(formData: FormData) {
   }
 
   try {
-    await verificarPropietario(inmueble_id)
+    const { inmueble } = await verificarPropietario(inmueble_id)
 
     await prisma.$transaction(async (tx) => {
       const solicitudesActivas = await tx.solicitudRenta.count({
@@ -287,6 +313,9 @@ export async function eliminarInmuebleAction(formData: FormData) {
     revalidatePath('/dashboard')
     revalidatePath('/propiedades')
     revalidatePath('/')
+    if (inmueble.publicaciones[0]) {
+      revalidatePath(`/propiedad/${inmueble.publicaciones[0].id}`)
+    }
   } catch (error) {
     console.error('Error al eliminar inmueble:', error)
     throw error

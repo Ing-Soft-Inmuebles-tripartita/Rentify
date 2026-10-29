@@ -1,3 +1,4 @@
+// Purpose: Acciones de servidor para Gestiona solicitudes de renta, decisiones y cierre de experiencias.
 'use server'
 
 import { redirect } from 'next/navigation'

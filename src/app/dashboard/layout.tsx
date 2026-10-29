@@ -1,3 +1,4 @@
+// Purpose: Implementa la interfaz y logica de layout.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'

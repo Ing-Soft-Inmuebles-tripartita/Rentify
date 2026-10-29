@@ -1,3 +1,4 @@
+// Purpose: Crea el cliente Supabase de servidor e integra sus cookies con Next.js.
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 

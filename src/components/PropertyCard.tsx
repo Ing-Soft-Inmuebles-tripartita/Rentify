@@ -1,3 +1,4 @@
+// Purpose: Componente reutilizable de interfaz. Resume una propiedad en listados y enlaza a su ficha detallada.
 import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, Star, Heart, CheckCircle2 } from 'lucide-react'

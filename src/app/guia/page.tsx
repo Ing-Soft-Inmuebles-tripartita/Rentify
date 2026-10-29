@@ -1,3 +1,4 @@
+// Purpose: Pagina de Next.js para la ruta /guia.
 import Link from 'next/link'
 import { ArrowLeft, BookOpen } from 'lucide-react'
 
