@@ -23,6 +23,7 @@ model Usuario {
   auth_user_id     String?  @unique
 
   telefono           String?
+  estado_residencia  String?
   foto_perfil        String?
   verificado_email   Boolean   @default(false)
   email_token        String?

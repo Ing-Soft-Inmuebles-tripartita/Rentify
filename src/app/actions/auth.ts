@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { ESTADOS_MEXICO } from '@/lib/estados-mexico'
 
 export interface FormState {
   error?: string
@@ -29,6 +30,40 @@ function validarContrasena(contrasena: string): string | null {
   return null
 }
 
+function mensajeErrorRegistro(codigo: string | undefined, status: number | undefined): string {
+  if (status === 401 || codigo === 'invalid_credentials') {
+    return 'Supabase rechazó la clave pública (401). Copia la clave anon/publicable vigente del mismo proyecto, verifica que no hayas puesto la service_role y reinicia el servidor de desarrollo.'
+  }
+
+  switch (codigo) {
+    case 'signup_disabled':
+    case 'email_provider_disabled':
+      return 'El registro por correo está desactivado en Supabase. Habilita Email en Authentication → Providers.'
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':
+      return 'Supabase limitó temporalmente los correos de registro. Espera un momento y vuelve a intentarlo.'
+    case 'unexpected_failure':
+      return 'Supabase no pudo enviar el correo de confirmación. Revisa Authentication → Logs y la configuración de correo del proyecto.'
+    case 'email_address_invalid':
+      return 'Supabase rechazó ese correo. Verifica que esté escrito correctamente.'
+    case 'user_already_exists':
+    case 'email_exists':
+      return 'Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.'
+    case 'weak_password':
+      return 'Supabase rechazó la contraseña. Usa una más segura y vuelve a intentarlo.'
+    default:
+      return 'Supabase no pudo completar el registro. Revisa la configuración del proveedor Email y los registros de Auth en el panel de Supabase.'
+  }
+}
+
+async function eliminarPerfilRegistro(usuarioId: number): Promise<void> {
+  try {
+    await prisma.usuario.delete({ where: { id: usuarioId } })
+  } catch (error) {
+    console.error('No se pudo limpiar el perfil después del fallo de registro:', error)
+  }
+}
+
 export async function registroAction(
   _prevState: FormState,
   formData: FormData
@@ -38,9 +73,29 @@ export async function registroAction(
   const correo = valor(formData, 'correo').toLowerCase()
   const contrasena = valor(formData, 'contrasena', false)
   const fechaNacimiento = valor(formData, 'fecha_nacimiento')
+  const telefono = valor(formData, 'telefono')
+  const estadoResidencia = valor(formData, 'estado_residencia')
+  const fotoPerfil = valor(formData, 'foto_perfil')
 
-  if (!nombre || !apellido || !correo || !contrasena || !fechaNacimiento) {
+  if (!nombre || !apellido || !correo || !contrasena || !fechaNacimiento || !telefono || !estadoResidencia) {
     return { error: 'Todos los campos son obligatorios.' }
+  }
+
+  if (!/^[+\d\s().-]{7,25}$/.test(telefono)) {
+    return { error: 'Escribe un número de teléfono válido.' }
+  }
+  if (!ESTADOS_MEXICO.includes(estadoResidencia as (typeof ESTADOS_MEXICO)[number])) {
+    return { error: 'Selecciona un estado válido.' }
+  }
+  if (fotoPerfil) {
+    try {
+      const fotoUrl = new URL(fotoPerfil)
+      if (fotoUrl.protocol !== 'https:' && fotoUrl.protocol !== 'http:') {
+        return { error: 'La foto debe tener una URL http o https válida.' }
+      }
+    } catch {
+      return { error: 'La URL de la foto de perfil no es válida.' }
+    }
   }
 
   const errorContrasena = validarContrasena(contrasena)
@@ -56,7 +111,16 @@ export async function registroAction(
   })
   if (existe) return { error: 'Este correo ya está registrado.' }
 
-  const supabase = await createSupabaseServerClient()
+  let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  try {
+    supabase = await createSupabaseServerClient()
+  } catch (error) {
+    console.error('Falta la configuración de Supabase Auth para el registro:', error)
+    return {
+      error: 'Supabase no está configurado en el servidor. Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+    }
+  }
+
   const contrasenaHash = await hashPassword(contrasena)
   let usuario
 
@@ -68,6 +132,9 @@ export async function registroAction(
         correo,
         contrasena: contrasenaHash,
         fecha_nacimiento: fecha,
+        telefono,
+        estado_residencia: estadoResidencia,
+        foto_perfil: fotoPerfil || null,
         estado: 'activo',
         verificado_email: false,
         preferencias_email: {
@@ -84,31 +151,46 @@ export async function registroAction(
     return { error: 'No se pudo crear la cuenta. Verifica los datos e intenta de nuevo.' }
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email: correo,
-    password: contrasena,
-    options: {
-      emailRedirectTo: `${obtenerUrlAplicacion()}/auth/callback?next=/dashboard`,
-      data: {
-        nombre,
-        apellido,
-        fecha_nacimiento: fechaNacimiento,
+  let resultado: Awaited<ReturnType<typeof supabase.auth.signUp>>
+  try {
+    resultado = await supabase.auth.signUp({
+      email: correo,
+      password: contrasena,
+      options: {
+        emailRedirectTo: `${obtenerUrlAplicacion()}/auth/callback?next=/dashboard`,
+        data: {
+          nombre,
+          apellido,
+          fecha_nacimiento: fechaNacimiento,
+          telefono,
+          estado_residencia: estadoResidencia,
+          foto_perfil: fotoPerfil || null,
+        },
       },
-    },
-  })
+    })
+  } catch (signupError) {
+    console.error('No se pudo conectar con Supabase Auth durante el registro:', signupError)
+    await eliminarPerfilRegistro(usuario.id)
+    return {
+      error: 'No se pudo conectar con Supabase Auth. Verifica la URL y la clave pública de Supabase e intenta de nuevo.',
+    }
+  }
+
+  const { data, error } = resultado
 
   if (error || !data.user) {
-    try {
-      await prisma.usuario.delete({ where: { id: usuario.id } })
-    } catch (cleanupError) {
-      console.error('No se pudo limpiar el perfil después del fallo de registro:', cleanupError)
-    }
-    console.error('Error al registrar usuario en Supabase Auth:', error)
-    return { error: 'No se pudo iniciar el registro de correo. Intenta de nuevo.' }
+    console.error('Supabase Auth rechazó el registro:', {
+      name: error?.name,
+      code: error?.code,
+      status: error?.status,
+      message: error?.message,
+    })
+    await eliminarPerfilRegistro(usuario.id)
+    return { error: mensajeErrorRegistro(error?.code, error?.status) }
   }
 
   if (data.user.identities?.length === 0) {
-    await prisma.usuario.delete({ where: { id: usuario.id } })
+    await eliminarPerfilRegistro(usuario.id)
     return { error: 'Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.' }
   }
 

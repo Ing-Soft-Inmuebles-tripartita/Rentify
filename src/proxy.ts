@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
     error,
   } = await supabase.auth.getUser()
 
-  if (error) {
+  if (error && error.name !== 'AuthSessionMissingError') {
     console.error('Error al validar la sesión en Proxy:', error)
   }
 

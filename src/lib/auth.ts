@@ -8,6 +8,8 @@ export async function getCurrentUser() {
     error,
   } = await supabase.auth.getUser()
 
+  if (error?.name === 'AuthSessionMissingError') return null
+
   if (error) {
     console.error('Error al validar la sesión de Supabase:', error)
     throw new Error('No se pudo validar la sesión. Intenta de nuevo.')

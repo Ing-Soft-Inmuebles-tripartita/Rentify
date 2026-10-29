@@ -2,8 +2,9 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Mail, Lock, User, Calendar } from 'lucide-react'
+import { ArrowLeft, UserPlus, Mail, Lock, User, Calendar, Phone, MapPin, Image as ImageIcon } from 'lucide-react'
 import { registroAction, FormState } from '@/app/actions/auth'
+import { ESTADOS_MEXICO } from '@/lib/estados-mexico'
 
 const initialState: FormState = {}
 
@@ -12,7 +13,7 @@ export default function RegistroPage() {
 
   return (
     <main className="min-h-screen bg-[#F3F1EB] flex items-center justify-center px-6 py-12">
-      <div className="bg-white rounded-2xl shadow-md p-8 max-w-lg w-full">
+      <div className="bg-white rounded-2xl shadow-md p-8 max-w-xl w-full">
         <Link
           href="/"
           className="flex items-center gap-2 text-[#3A4D39] font-medium mb-6 hover:opacity-80"
@@ -82,6 +83,57 @@ export default function RegistroPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <div className="relative">
+                <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="tel"
+                  name="telefono"
+                  required
+                  autoComplete="tel"
+                  minLength={7}
+                  maxLength={25}
+                  placeholder="+52 33 1234 5678"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado donde vives</label>
+              <div className="relative">
+                <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <select
+                  name="estado_residencia"
+                  required
+                  defaultValue=""
+                  autoComplete="address-level1"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
+                >
+                  <option value="" disabled>Selecciona tu estado</option>
+                  {ESTADOS_MEXICO.map((estado) => (
+                    <option key={estado} value={estado}>{estado}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Foto de perfil (opcional)</label>
+            <div className="relative">
+              <ImageIcon size={18} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="url"
+                name="foto_perfil"
+                placeholder="https://sitio.com/mi-foto.jpg"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A4D39] focus:border-transparent outline-none"
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Pega un enlace público a tu imagen. Podrás cambiarlo desde tu perfil.</p>
           </div>
 
           <div>

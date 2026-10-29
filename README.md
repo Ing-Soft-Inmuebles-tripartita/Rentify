@@ -51,8 +51,9 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 ### Cuentas y perfil
 
 - Registro, inicio y cierre de sesión.
+- El registro solicita teléfono y estado de residencia; la foto de perfil se puede agregar mediante una URL pública.
 - Restablecimiento de contraseña mediante un enlace temporal.
-- Edición de datos de perfil, cambio de contraseña y preferencias de correo.
+- Edición de datos de perfil y cambio de contraseña.
 - Roles independientes de propietario e inquilino: una cuenta puede tener ambos perfiles.
 - Carga y seguimiento de documentos para revisión administrativa.
 
@@ -297,6 +298,8 @@ Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación
 4. Supabase incluye envío de correo para Auth, pero su SMTP predeterminado tiene límites de entrega y está pensado para pruebas. Para producción, revisa los límites vigentes de Supabase y configura un SMTP personalizado si necesitas entrega confiable; eso requiere un proveedor externo y un remitente autorizado.
 
 Los correos de confirmación y recuperación los envía Supabase Auth. Los eventos operativos (solicitudes, visitas, evaluaciones, documentos, moderación y reportes) se guardan como notificaciones dentro de Rentify y se muestran en el dashboard; no se envían por correo. Las preferencias previas de notificación por email ya no aplican.
+
+Si el registro falla, revisa el mensaje del formulario y los eventos en **Authentication → Logs**. Un error de límite requiere esperar; un fallo de envío de confirmación requiere revisar la configuración de correo y los límites del SMTP predeterminado. Tras añadir `estado_residencia` al perfil, aplica la nueva migración en la base de desarrollo con `npx prisma migrate deploy` antes de probar registros nuevos.
 
 Las cuentas previas de Rentify se pueden vincular al iniciar sesión si su contraseña heredada es válida y su correo todavía no tiene una identidad incompatible en Supabase. La primera vinculación requiere confirmar el correo. Si Supabase ya tiene una identidad para ese correo, usa el flujo de recuperación de Supabase antes de volver a iniciar sesión.
 
