@@ -310,7 +310,7 @@ Las sesiones y su duración se administran mediante Supabase Auth y cookies SSR;
 | Comando | Descripción |
 | --- | --- |
 | `npm run dev` | Servidor de desarrollo Next.js. |
-| `npm run build` | Compilación de producción. |
+| `npm run build` | Genera el cliente Prisma desde el esquema y compila la aplicación para producción. |
 | `npm run start` | Servidor de producción; requiere ejecutar primero `npm run build`. |
 | `npm run lint` | ESLint sobre `src` y `prisma/seed.ts`. |
 | `npx tsc --noEmit` | Comprobación de tipos de TypeScript. |
