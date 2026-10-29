@@ -62,6 +62,7 @@ model Inquilino {
 
   usuario             Usuario          @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
   solicitudes         SolicitudRenta[]
+  referencias         ReferenciaRenta[]  // 🔹 NUEVO (RF05)
 }
 
 model Administrador {
@@ -71,6 +72,21 @@ model Administrador {
   usuario        Usuario        @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
   verificaciones Verificacion[]
   moderaciones   Moderacion[]
+}
+
+// 🔹 NUEVO (RF05): Referencias de renta del inquilino
+model ReferenciaRenta {
+  id             Int      @id @default(autoincrement())
+  inquilino_id   Int
+  nombre_contacto String
+  telefono       String
+  relacion       String   // "Propietario anterior", "Familiar", "Trabajo", etc.
+  comentario     String?
+  fecha_creacion DateTime @default(now())
+
+  inquilino      Inquilino @relation(fields: [inquilino_id], references: [usuario_id], onDelete: Cascade)
+
+  @@index([inquilino_id])
 }
 
 // ==================== INMUEBLES Y PUBLICACIONES ====================
@@ -86,7 +102,7 @@ model Inmueble {
   metros_cuadrados    Float
 
   estado_inventario      String   @default("disponible")
-  documento_verificado   Boolean  @default(false)
+  documento_verificado   Boolean  @default(false)  // 🔹 ya existía, se llenará al aprobar escritura (RF07)
   latitud                Float?
   longitud               Float?
   piso                   Int?     @default(1)
@@ -96,7 +112,7 @@ model Inmueble {
 
   propietario         Propietario              @relation(fields: [propietario_id], references: [usuario_id])
   caracteristicas     InmuebleCaracteristica[]
-  documentos          Documento[]
+  documentos          Documento[]              // 🔹 ya existía; ahora se poblará con escrituras (RF07)
   publicaciones       Publicacion[]
   calificacion_promedio Float @default(0)
   total_evaluaciones    Int   @default(0)
@@ -170,9 +186,9 @@ model Resena {
 model Documento {
   id             Int            @id @default(autoincrement())
   usuario_id     Int?
-  inmueble_id    Int?
-  tipo_documento String
-  ruta_archivo   String
+  inmueble_id    Int?           // 🔹 ya existía; ahora se usa para escrituras (RF07)
+  tipo_documento String         // Valores: "INE", "COMPROBANTE_INGRESOS", "ESCRITURA", "TITULO_PROPIEDAD", "PREDIAL"
+  ruta_archivo   String         // ⚠️ Guardar PATH del bucket, NO URL firmada de 1 año
   fecha_carga    DateTime       @default(now())
   estado         String         @default("pendiente")
 
@@ -184,6 +200,8 @@ model Documento {
   usuario        Usuario?       @relation(fields: [usuario_id], references: [id])
   inmueble       Inmueble?      @relation(fields: [inmueble_id], references: [id])
   verificaciones Verificacion[]
+
+  @@index([inmueble_id])   // 🔹 NUEVO: índice para consultas de escrituras por inmueble
 }
 
 model Verificacion {

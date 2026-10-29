@@ -64,7 +64,10 @@ async function DashboardContent() {
         },
         include: {
           inquilino: {
-            include: { usuario: true },
+            include: {
+              usuario: true,
+              referencias: { orderBy: { fecha_creacion: 'desc' } },
+            },
           },
           publicacion: {
             include: {
@@ -76,6 +79,52 @@ async function DashboardContent() {
         orderBy: { fecha_solicitud: 'desc' },
       })
     : []
+
+  const inquilinoIds = [...new Set(solicitudesRecibidas.map((solicitud) => solicitud.inquilino_id))]
+  const experienciasPrevias = inquilinoIds.length
+    ? await prisma.experienciaRenta.findMany({
+        where: {
+          solicitud: { inquilino_id: { in: inquilinoIds } },
+        },
+        include: {
+          solicitud: {
+            include: {
+              publicacion: { include: { inmueble: true } },
+            },
+          },
+          evaluaciones: true,
+        },
+        orderBy: { fecha_inicio: 'desc' },
+      })
+    : []
+
+  const experienciasPorInquilino = new Map<
+    number,
+    { id: number; inmueble_tipo: string; calificacion: number; estado: string }[]
+  >()
+  for (const experiencia of experienciasPrevias) {
+    const inquilinoId = experiencia.solicitud.inquilino_id
+    const calificacion =
+      experiencia.evaluaciones.length > 0
+        ? Math.round(
+            (experiencia.evaluaciones.reduce(
+              (total, evaluacion) => total + evaluacion.calificacion,
+              0
+            ) /
+              experiencia.evaluaciones.length) *
+              10
+          ) / 10
+        : 0
+    const historial = experienciasPorInquilino.get(inquilinoId) ?? []
+
+    historial.push({
+      id: experiencia.id,
+      inmueble_tipo: experiencia.solicitud.publicacion.inmueble.tipo_inmueble,
+      calificacion,
+      estado: experiencia.estado,
+    })
+    experienciasPorInquilino.set(inquilinoId, historial)
+  }
 
   const visitasRecibidas = usuario.propietario
     ? await prisma.visita.findMany({
@@ -302,6 +351,18 @@ async function DashboardContent() {
                   imagen:
                     sol.publicacion.fotos[0]?.ruta_archivo ||
                     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400',
+                  historial: {
+                    verificado: sol.inquilino.estado_verificacion === 'aprobado',
+                    referencias: sol.inquilino.referencias.map((referencia) => ({
+                      id: referencia.id,
+                      nombre_contacto: referencia.nombre_contacto,
+                      telefono: referencia.telefono,
+                      relacion: referencia.relacion,
+                      comentario: referencia.comentario,
+                    })),
+                    experiencias:
+                      experienciasPorInquilino.get(sol.inquilino_id) ?? [],
+                  },
                 }}
               />
             ))}

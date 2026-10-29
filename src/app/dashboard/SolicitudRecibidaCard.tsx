@@ -7,6 +7,7 @@ import {
   aprobarSolicitudAction,
   rechazarSolicitudAction,
 } from '@/app/actions/solicitudes'
+import HistorialSolicitante from '@/components/dashboard/HistorialSolicitante'
 
 interface Props {
   solicitud: {
@@ -19,6 +20,22 @@ interface Props {
     inmueble_tipo: string
     inmueble_direccion: string
     imagen: string
+    historial: {
+      verificado: boolean
+      referencias: {
+        id: number
+        nombre_contacto: string
+        telefono: string
+        relacion: string
+        comentario: string | null
+      }[]
+      experiencias: {
+        id: number
+        inmueble_tipo: string
+        calificacion: number
+        estado: string
+      }[]
+    }
   }
 }
 
@@ -49,8 +66,8 @@ export default function SolicitudRecibidaCard({ solicitud }: Props) {
       : 'bg-red-100 text-red-700'
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-4">
-      <div className="relative w-full md:w-24 h-24 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-start gap-4">
+      <div className="relative w-full md:w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
         <Image
           src={solicitud.imagen}
           alt={solicitud.inmueble_tipo}
@@ -90,10 +107,13 @@ export default function SolicitudRecibidaCard({ solicitud }: Props) {
             year: 'numeric',
           })}
         </p>
+
+        {/* 🔹 RF05: Historial del solicitante */}
+        <HistorialSolicitante historial={solicitud.historial} />
       </div>
 
       {solicitud.estado === 'pendiente' && (
-        <div className="flex gap-2 md:flex-col">
+        <div className="flex gap-2 md:flex-col flex-shrink-0">
           <button
             onClick={handleAprobar}
             disabled={isPending}

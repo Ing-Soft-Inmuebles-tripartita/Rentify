@@ -15,6 +15,20 @@ async function PerfilContent() {
     orderBy: { fecha_carga: 'desc' },
   })
 
+  const referencias = usuario.inquilino
+    ? await prisma.referenciaRenta.findMany({
+        where: { inquilino_id: usuario.inquilino.usuario_id },
+        select: {
+          id: true,
+          nombre_contacto: true,
+          telefono: true,
+          relacion: true,
+          comentario: true,
+        },
+        orderBy: { fecha_creacion: 'desc' },
+      })
+    : []
+
   const estadoDoc = (estado: string) => {
     if (estado === 'aprobado') return { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Aprobado' }
     if (estado === 'rechazado') return { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', label: 'Rechazado' }
@@ -37,7 +51,7 @@ async function PerfilContent() {
         </p>
       </div>
 
-      <PerfilTabs usuario={usuario} />
+      <PerfilTabs usuario={usuario} referencias={referencias} />
 
       <div className="bg-white rounded-2xl shadow-sm p-6 mt-6">
         <h2 className="text-xl font-bold text-[#1F1F1F] mb-2 flex items-center gap-2">

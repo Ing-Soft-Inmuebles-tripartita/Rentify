@@ -9,6 +9,7 @@ import {
   actualizarPreferenciasAction,
   PerfilState,
 } from '@/app/actions/perfil'
+import ReferenciasSection from '@/components/perfil/ReferenciasSection'
 
 const initialState: PerfilState = {}
 
@@ -20,9 +21,16 @@ interface Props {
     foto_perfil: string | null
     preferencias_email: Prisma.JsonValue | null
   }
+  referencias: {
+    id: number
+    nombre_contacto: string
+    telefono: string
+    relacion: string
+    comentario: string | null
+  }[]
 }
 
-export default function PerfilTabs({ usuario }: Props) {
+export default function PerfilTabs({ usuario, referencias }: Props) {
   const [tab, setTab] = useState<'datos' | 'seguridad' | 'preferencias'>('datos')
 
   return (
@@ -40,7 +48,9 @@ export default function PerfilTabs({ usuario }: Props) {
       </div>
 
       <div className="p-6">
-        {tab === 'datos' && <TabDatos usuario={usuario} />}
+        {tab === 'datos' && (
+          <TabDatos usuario={usuario} referencias={referencias} />
+        )}
         {tab === 'seguridad' && <TabSeguridad />}
         {tab === 'preferencias' && <TabPreferencias usuario={usuario} />}
       </div>
@@ -74,29 +84,33 @@ function TabButton({
   )
 }
 
-function TabDatos({ usuario }: Props) {
+function TabDatos({ usuario, referencias }: Props) {
   const [state, formAction, isPending] = useActionState(actualizarPerfilAction, initialState)
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Nombre" name="nombre" defaultValue={usuario.nombre} required />
-        <Field label="Apellido" name="apellido" defaultValue={usuario.apellido} required />
-      </div>
-      <Field label="Teléfono" name="telefono" type="tel" defaultValue={usuario.telefono || ''} placeholder="+52 33 1234 5678" />
-      <Field label="URL de foto de perfil" name="foto_perfil" type="url" defaultValue={usuario.foto_perfil || ''} placeholder="https://..." />
+    <div className="space-y-6">
+      <form action={formAction} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Nombre" name="nombre" defaultValue={usuario.nombre} required />
+          <Field label="Apellido" name="apellido" defaultValue={usuario.apellido} required />
+        </div>
+        <Field label="Teléfono" name="telefono" type="tel" defaultValue={usuario.telefono || ''} placeholder="+52 33 1234 5678" />
+        <Field label="URL de foto de perfil" name="foto_perfil" type="url" defaultValue={usuario.foto_perfil || ''} placeholder="https://..." />
 
-      {state?.error && <Alert type="error">{state.error}</Alert>}
-      {state?.success && <Alert type="success">{state.mensaje}</Alert>}
+        {state?.error && <Alert type="error">{state.error}</Alert>}
+        {state?.success && <Alert type="success">{state.mensaje}</Alert>}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="bg-[#3A4D39] text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition font-medium disabled:opacity-50"
-      >
-        {isPending ? 'Guardando...' : 'Guardar cambios'}
-      </button>
-    </form>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="bg-[#3A4D39] text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition font-medium disabled:opacity-50"
+        >
+          {isPending ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+      </form>
+
+      <ReferenciasSection referencias={referencias} />
+    </div>
   )
 }
 
@@ -123,7 +137,7 @@ function TabSeguridad() {
   )
 }
 
-function TabPreferencias({ usuario }: Props) {
+function TabPreferencias({ usuario }: Pick<Props, 'usuario'>) {
   const [state, formAction, isPending] = useActionState(actualizarPreferenciasAction, initialState)
   const preferencias = usuario.preferencias_email
   const prefs =
